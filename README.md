@@ -2,6 +2,8 @@
 
 一个独立品牌的前端竞拍市场，借鉴爬宠交易平台常见的信息架构：拍品浏览、筛选、倒计时、加价、代理竞价、账户保证金、竞拍记录、规则说明与钱包状态。
 
+在线访问：<https://mcp.edgeone.site/share/RMnATnjSqeEOtTCD_u9V7> · 源码：<https://github.com/leixianya/gecko-auction>
+
 页面不连接支付、银行卡、身份证或订单后台；金额、账户余额、热度与竞拍者由浏览器端状态驱动。图片来源与许可记录见 [`assets/ATTRIBUTIONS.md`](assets/ATTRIBUTIONS.md)。
 
 ## 本地预览
