@@ -11,6 +11,8 @@
   var nowAtLoad = Date.now();
   var toastTimer;
   var countdownTimer;
+  var configuredAssetBase = String(window.__GECKO_ASSET_BASE__ || '');
+  var assetBase = configuredAssetBase && configuredAssetBase.charAt(configuredAssetBase.length - 1) !== '/' ? configuredAssetBase + '/' : configuredAssetBase;
 
   var $ = function (id) { return document.getElementById(id); };
   var $$ = function (selector, root) { return Array.prototype.slice.call((root || document).querySelectorAll(selector)); };
@@ -21,6 +23,12 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character];
     });
   };
+  function assetUrl(file) {
+    var value = String(file || '');
+    if (/^(?:https?:|data:|blob:|\/)/i.test(value)) return value;
+    if (value.indexOf('assets/') === 0) value = value.slice(7);
+    return assetBase + 'assets/' + value;
+  }
 
   var imagePool = [
     'commons-orange.png', 'commons-tete.png', 'commons-crusted.jpg',
@@ -446,7 +454,7 @@
   function cardMarkup(lot) {
     var status = statusOf(lot);
     var favorite = appState.favorites.indexOf(lot.id) !== -1;
-    var source = 'assets/' + lot.image;
+    var source = assetUrl(lot.image);
     return '<article class="lot-card" data-lot-id="' + esc(lot.id) + '">' +
       '<div class="lot-card-image" data-image-frame data-fallback="' + esc(lot.title) + '">' +
         '<img src="' + esc(source) + '" alt="' + esc(lot.title + ' 睫角守宫') + '" loading="lazy" decoding="async" />' +
@@ -482,7 +490,7 @@
     if (!liveLot) return;
     var profile = geneProfiles[liveLot.morph];
     var image = $('featured-image');
-    setImage(image, 'assets/' + liveLot.image, liveLot.title + ' 睫角守宫', liveLot.title);
+    setImage(image, assetUrl(liveLot.image), liveLot.title + ' 睫角守宫', liveLot.title);
     wireImage(image);
     if ($('featured-lot-id')) $('featured-lot-id').textContent = liveLot.id;
     if ($('featured-title')) $('featured-title').textContent = liveLot.title;
@@ -692,7 +700,7 @@
     activeLotId = id;
     var profile = geneProfiles[lot.morph];
     var modalImage = $('modal-image');
-    setImage(modalImage, 'assets/' + lot.image, lot.title + ' 睫角守宫', lot.title);
+    setImage(modalImage, assetUrl(lot.image), lot.title + ' 睫角守宫', lot.title);
     wireImage(modalImage);
     if ($('modal-id')) $('modal-id').textContent = lot.id;
     if ($('modal-title')) $('modal-title').textContent = lot.title;
@@ -705,7 +713,7 @@
       $('modal-status').className = 'status-badge ' + statusOf(lot);
     }
     if ($('modal-image-label')) $('modal-image-label').textContent = 'WIKIMEDIA COMMONS / ARCHIVE';
-    if ($('modal-source')) $('modal-source').innerHTML = '图片档案：Wikimedia Commons · <a href="assets/ATTRIBUTIONS.md" target="_blank" rel="noreferrer">查看作者与许可信息 ↗</a>';
+    if ($('modal-source')) $('modal-source').innerHTML = '图片档案：Wikimedia Commons · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看作者与许可信息 ↗</a>';
     if ($('modal-attributes')) {
       $('modal-attributes').innerHTML = [
         ['基因方向', profile.label], ['性别', lot.gender], ['出生年份', lot.year],
@@ -716,7 +724,7 @@
     var thumbs = $('modal-thumbs');
     if (thumbs) {
       thumbs.innerHTML = lot.gallery.map(function (file, index) {
-        return '<button class="modal-thumb' + (index === 0 ? ' is-active' : '') + '" type="button" data-thumb="assets/' + esc(file) + '" data-alt="' + esc(lot.title + ' 角度 ' + (index + 1)) + '"><img src="assets/' + esc(file) + '" alt="' + esc(lot.title + ' 角度 ' + (index + 1)) + '" loading="lazy" /></button>';
+        return '<button class="modal-thumb' + (index === 0 ? ' is-active' : '') + '" type="button" data-thumb="' + esc(assetUrl(file)) + '" data-alt="' + esc(lot.title + ' 角度 ' + (index + 1)) + '"><img src="' + esc(assetUrl(file)) + '" alt="' + esc(lot.title + ' 角度 ' + (index + 1)) + '" loading="lazy" /></button>';
       }).join('');
       $$('.modal-thumb img', thumbs).forEach(wireImage);
     }
