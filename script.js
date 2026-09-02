@@ -306,12 +306,12 @@
    * an endless network loop.
    */
   var imageMirrorBases = [
-    'https://cdn.jsdelivr.net/gh/leixianya/gecko-auction@cebb02ba9968878a5fd0e19a788104bf430a4d09/assets/',
-    'https://testingcf.jsdelivr.net/gh/leixianya/gecko-auction@cebb02ba9968878a5fd0e19a788104bf430a4d09/assets/',
-    'https://fastly.jsdelivr.net/gh/leixianya/gecko-auction@cebb02ba9968878a5fd0e19a788104bf430a4d09/assets/',
-    'https://gcore.jsdelivr.net/gh/leixianya/gecko-auction@cebb02ba9968878a5fd0e19a788104bf430a4d09/assets/',
-    'https://quantil.jsdelivr.net/gh/leixianya/gecko-auction@cebb02ba9968878a5fd0e19a788104bf430a4d09/assets/',
-    'https://raw.githubusercontent.com/leixianya/gecko-auction/cebb02ba9968878a5fd0e19a788104bf430a4d09/assets/'
+    'https://cdn.jsdelivr.net/gh/leixianya/gecko-auction@f54da87878652472f950bbc38523993d0d148da3/assets/',
+    'https://testingcf.jsdelivr.net/gh/leixianya/gecko-auction@f54da87878652472f950bbc38523993d0d148da3/assets/',
+    'https://fastly.jsdelivr.net/gh/leixianya/gecko-auction@f54da87878652472f950bbc38523993d0d148da3/assets/',
+    'https://gcore.jsdelivr.net/gh/leixianya/gecko-auction@f54da87878652472f950bbc38523993d0d148da3/assets/',
+    'https://quantil.jsdelivr.net/gh/leixianya/gecko-auction@f54da87878652472f950bbc38523993d0d148da3/assets/',
+    'https://raw.githubusercontent.com/leixianya/gecko-auction/f54da87878652472f950bbc38523993d0d148da3/assets/'
   ];
   var imageCandidates = typeof WeakMap === 'function' ? new WeakMap() : null;
 
