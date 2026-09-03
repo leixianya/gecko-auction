@@ -219,7 +219,7 @@ img { display: block; max-width: 100%; }
 .modal-backdrop.is-open > * { transform: none; }
 .modal-close { position: absolute; z-index: 4; top: 15px; right: 17px; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 50%; background: rgba(11,16,20,.55); color: var(--paper); font-size: 21px; line-height: 1; }
 .modal-close:hover { border-color: var(--coral); background: var(--coral); color: var(--ink); }
-.lot-dialog-grid { display: grid; grid-template-columns: .93fr 1.07fr; }
+.lot-dialog-grid { display: grid; grid-template-columns: .93fr 1.07fr; align-items: start; }
 .modal-gallery { min-width: 0; padding: 0 0 24px; }
 .modal-image-wrap { min-height: 470px; border-radius: var(--radius) 0 0 0; }
 .modal-image-wrap img { min-height: 470px; }
