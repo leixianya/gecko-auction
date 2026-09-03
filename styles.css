@@ -316,6 +316,14 @@ img { display: block; max-width: 100%; }
   .market-lower { grid-template-columns: 1fr; }.site-footer { display: block; }.site-footer > div + div { margin-top: 12px; }
 }
 
+@media (min-width: 901px) and (max-width: 1080px) {
+  /* The narrow desktop/tablet band has room for the phone silhouette, but the
+     live status pill must leave the CHW descriptor readable. */
+  .hero-phone-preview { right: 22px; width: 158px; height: 214px; }
+  .market-intro > div:first-child { max-width: calc(100% - 190px); padding-top: 28px; }
+  .market-status { position: absolute; top: 23px; left: 28px; margin: 0; }
+}
+
 @media (max-width: 620px) {
   body { font-size: 13px; }.topbar { padding-inline: 17px; }.brand-copy b { font-size: 16px; }.top-search { display: none; }.top-actions { gap: 8px; }.wallet-button { padding: 7px 8px; }.wallet-button span { display: none; }.wallet-button strong { font-size: 9px; }.avatar-button { width: 29px; height: 29px; }.main-content { padding: 34px 17px 24px; }
   .market-intro { display: block; margin-bottom: 34px; }.market-intro h1 { margin-top: 18px; font-size: clamp(43px, 14.2vw, 65px); }.intro-copy { margin-top: 18px; font-size: 14px; }.market-status { margin-top: 24px; padding-bottom: 0; }
@@ -463,6 +471,8 @@ body { background: var(--bg); color: var(--ink); }
 .lot-card-chw { border-color: rgba(113,57,216,.42); box-shadow: 0 10px 26px rgba(113,57,216,.1); }
 .lot-card-chw .lot-card-image { background: linear-gradient(145deg, #eadfff, #bca3f0); }
 .ai-card-tag { background: var(--lime) !important; border-color: var(--ink) !important; color: var(--ink) !important; }
+.modal-thumb[data-image-frame] { position: relative; }
+.modal-thumb[data-image-frame]::before { padding: 2px; color: var(--purple-dark); font-family: var(--sans); font-size: 7px; line-height: 1.1; text-align: center; }
 .lot-card-image { height: 226px; background: linear-gradient(145deg, #e7dcff, #cab8fa); }
 .lot-card-image::after { background: linear-gradient(180deg, rgba(28,23,48,.08), transparent 45%, rgba(28,23,48,.64)); }
 .card-top { color: rgba(255,255,255,.95); font-weight: 800; }
@@ -567,4 +577,372 @@ body { background: var(--bg); color: var(--ink); }
   .auction-dock.is-collapsed { opacity: 0; pointer-events: none; transform: translateY(calc(100% + 24px)); }
   .bottom-nav { padding-bottom: calc(5px + env(safe-area-inset-bottom)); height: calc(63px + env(safe-area-inset-bottom)); }
   .app-shell { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+}
+
+/* -------------------------------------------------------------------------
+   App-market visual pass
+   The public reference uses a dark navy chrome, a warm lemon landing panel,
+   white rounded cards and a restrained orange accent.  This final layer
+   keeps the auction interactions above while bringing that visual rhythm to
+   the desktop and mobile surfaces.
+   ------------------------------------------------------------------------- */
+:root {
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --panel-2: #fff9c7;
+  --panel-3: #f2f2f2;
+  --paper: #1d222b;
+  --paper-2: #f5f5f3;
+  --ink: #1d222b;
+  --muted: #73767d;
+  --muted-2: #9b9da2;
+  --line: rgba(29, 34, 43, .13);
+  --line-dark: rgba(29, 34, 43, .2);
+  --lime: #fdf200;
+  --orange: #f28a24;
+  --coral: #f26745;
+  --blue: #5866a4;
+  --purple: #7550c7;
+  --purple-dark: #1d222b;
+  --serif: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  --sans: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  --mono: "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+}
+
+body { background: #fff; color: var(--ink); }
+.app-shell { background: #fff; }
+
+/* Header / chrome */
+.topbar {
+  height: 78px;
+  padding-inline: 38px;
+  border-bottom: 0;
+  background: #1d222b;
+  box-shadow: 0 2px 0 rgba(29, 34, 43, .12);
+}
+.brand { min-width: 210px; }
+.brand-mark { border-color: var(--lime); background: var(--lime); transform: rotate(-6deg); }
+.brand-mark i { background: var(--ink); }
+.brand-mark::after { background: var(--orange); }
+.brand-copy b { color: #fff; font-family: var(--sans); font-weight: 850; letter-spacing: .02em; }
+.brand-copy small { color: rgba(255,255,255,.56); font-family: var(--sans); letter-spacing: .11em; }
+.top-search { border-color: rgba(255,255,255,.55); background: rgba(255,255,255,.08); color: #fff; }
+.top-search input { color: #fff; }
+.top-search input::placeholder { color: rgba(255,255,255,.56); }
+.top-search kbd { border-color: rgba(255,255,255,.28); color: rgba(255,255,255,.66); }
+.top-link, .top-nav a { color: rgba(255,255,255,.78); }
+.top-link:hover, .top-nav a:hover { color: var(--lime); }
+.wallet-button { border-color: rgba(255,255,255,.42); color: rgba(255,255,255,.76); }
+.wallet-button strong { color: var(--lime); }
+.avatar-button { border-color: var(--lime); background: var(--lime); color: var(--ink); }
+.mobile-menu i { background: #fff; }
+
+.app-layout { grid-template-columns: 224px minmax(0, 1fr); min-height: calc(100vh - 78px); }
+.sidebar {
+  top: 78px;
+  height: calc(100vh - 78px);
+  border-right-color: var(--line);
+  background: #fff;
+}
+.side-label { color: #a1a2a5; font-family: var(--sans); font-weight: 800; letter-spacing: .1em; }
+.side-filter, .morph-filter { color: #6f7278; border-radius: 8px; font-weight: 600; }
+.side-filter:hover, .side-filter.is-active { background: #fff9a6; color: var(--ink); box-shadow: inset 3px 0 var(--orange); }
+.side-filter b, .morph-filter span { color: #a1a2a5; }
+.morph-filter:hover, .morph-filter.is-active { background: #fff9a6; color: var(--ink); }
+.morph-filter.is-active span { color: var(--orange); }
+.dot-all { background: var(--orange); }.dot-chw { background: #8b55d9; }.dot-sable { background: #5b6069; }.dot-lily { background: #ebe4ca; }.dot-ax { background: #94a9bd; }.dot-harlequin { background: #e39b47; }
+.side-note { border-color: rgba(242,138,36,.3); background: linear-gradient(145deg, #fff9bd, #fff); }
+.side-note-icon { background: var(--orange); color: #fff; }
+.side-note p { color: #73767d; }
+.side-note button { color: var(--orange); }
+.side-footer { color: #aaa; }
+
+/* Warm landing band */
+.main-content { padding-top: 0; background: #fff; }
+.market-intro {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  max-width: 1360px;
+  min-height: 276px;
+  margin: 0 auto 22px;
+  padding: 48px clamp(28px, 5vw, 74px) 42px;
+  overflow: hidden;
+  border-radius: 0 0 28px 28px;
+  background: linear-gradient(111deg, #fffbd0 0%, #fff8a4 56%, #fff38c 100%);
+}
+.market-intro::before {
+  position: absolute;
+  z-index: -1;
+  right: 8%;
+  bottom: -100px;
+  width: 310px;
+  height: 310px;
+  border: 32px solid rgba(242,138,36,.15);
+  border-radius: 50%;
+  content: "";
+}
+.market-intro::after {
+  position: absolute;
+  z-index: -1;
+  right: 5%;
+  top: 35px;
+  width: 82px;
+  height: 22px;
+  border-top: 5px solid rgba(242,138,36,.72);
+  border-radius: 50%;
+  transform: rotate(-18deg);
+  content: "";
+}
+.breadcrumb { color: rgba(29,34,43,.55); font-family: var(--sans); font-weight: 700; letter-spacing: .1em; }
+.breadcrumb i { color: var(--orange); }
+.market-intro h1 { color: var(--ink); font-family: var(--sans); font-weight: 850; letter-spacing: -.08em; }
+.market-intro h1 em { color: var(--orange); font-family: var(--sans); font-style: normal; font-weight: 850; }
+.market-intro h1 { position: relative; }
+.hero-script {
+  position: absolute;
+  z-index: 1;
+  right: 7%;
+  bottom: 2%;
+  color: var(--orange);
+  font-family: "Brush Script MT", "Segoe Script", cursive;
+  font-size: clamp(25px, 3.2vw, 48px);
+  font-weight: 400;
+  letter-spacing: .02em;
+  line-height: 1;
+  opacity: .78;
+  transform: rotate(-8deg);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.intro-copy { color: rgba(29,34,43,.68); font-family: var(--sans); font-weight: 500; }
+.market-status { z-index: 1; margin-bottom: 4px; padding: 9px 12px; border: 1px solid rgba(29,34,43,.18); border-radius: 999px; background: rgba(255,255,255,.62); }
+.market-status strong { color: var(--ink); font-family: var(--sans); font-weight: 850; letter-spacing: .11em; }
+.market-status small { color: rgba(29,34,43,.58); font-family: var(--sans); }
+.live-dot { background: var(--orange); box-shadow: 0 0 0 4px rgba(242,138,36,.17); }
+
+/* A small, local phone preview gives the landing band the same app-first
+   silhouette as the reference while reusing the already bundled CHW image. */
+.hero-phone-preview {
+  position: absolute;
+  z-index: 0;
+  right: clamp(34px, 8vw, 108px);
+  bottom: -18px;
+  display: flex;
+  flex-direction: column;
+  width: 186px;
+  height: 246px;
+  overflow: hidden;
+  border: 7px solid var(--ink);
+  border-bottom-width: 9px;
+  border-radius: 25px 25px 17px 17px;
+  background: #fff;
+  box-shadow: 8px 8px 0 rgba(242,138,36,.56), 0 15px 26px rgba(29,34,43,.18);
+  transform: rotate(3deg);
+}
+.hero-phone-preview::before {
+  position: absolute;
+  z-index: 5;
+  top: 4px;
+  left: 50%;
+  width: 38px;
+  height: 6px;
+  border-radius: 0 0 8px 8px;
+  background: var(--ink);
+  content: "";
+  transform: translateX(-50%);
+}
+.hero-phone-status { display: flex; justify-content: space-between; padding: 10px 11px 3px; color: var(--ink); font-family: var(--mono); font-size: 6px; font-weight: 700; }
+.hero-phone-head { display: flex; align-items: baseline; justify-content: center; gap: 20px; padding: 2px 10px 6px; color: #a1a2a5; font-size: 10px; }
+.hero-phone-head b { position: relative; color: var(--ink); font-weight: 850; }.hero-phone-head b::after { position: absolute; right: 1px; bottom: -5px; left: 1px; height: 3px; border-radius: 4px; background: var(--orange); content: ""; }
+.hero-phone-search { margin: 0 10px 7px; padding: 4px 7px; border: 1px solid var(--ink); border-radius: 999px; color: #92949a; font-size: 7px; }.hero-phone-search span { margin-right: 4px; color: var(--ink); font-size: 10px; }
+.hero-phone-cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin: 0 8px 7px; padding: 5px 4px; border-radius: 8px; background: #fff9c7; color: var(--ink); text-align: center; font-size: 7px; font-style: normal; font-weight: 700; }.hero-phone-cats i { display: grid; place-items: center; height: 22px; border-radius: 6px; background: #fff; font-style: normal; }
+.hero-phone-lot { display: grid; grid-template-columns: 58px 1fr; gap: 6px; align-items: center; margin: 0 9px; padding: 5px; border-radius: 8px; background: #f6f6f4; }.hero-phone-lot img { width: 58px; height: 53px; border-radius: 6px; object-fit: cover; }.hero-phone-lot strong, .hero-phone-lot span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.hero-phone-lot strong { color: var(--ink); font-size: 8px; font-weight: 850; }.hero-phone-lot span { margin-top: 5px; color: var(--orange); font-family: var(--mono); font-size: 6px; }
+.hero-phone-nav { display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; gap: 2px; margin-top: auto; padding: 7px 5px 5px; border-top: 1px solid var(--line); color: #97999e; text-align: center; font-size: 6px; }.hero-phone-nav b { display: grid; place-items: center; width: 22px; height: 22px; margin: -11px auto 0; border: 2px solid var(--ink); border-radius: 50%; background: var(--lime); color: var(--ink); font-size: 13px; }
+
+.brand-mark { width: 38px; height: 38px; padding: 5px 4px; }
+.brand-mark i { width: 5px; }.brand-mark i:nth-child(1) { height: 11px; }.brand-mark i:nth-child(2) { height: 20px; }.brand-mark i:nth-child(3) { height: 27px; }
+
+/* Category strip echoes the app's floating category panel. */
+.category-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 1360px;
+  margin: 0 auto 26px;
+  padding: 9px 12px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: 0 7px 18px rgba(29,34,43,.06);
+  scrollbar-width: none;
+}
+.category-ribbon::-webkit-scrollbar { display: none; }
+.category-ribbon a { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; min-height: 43px; padding: 0 13px 0 7px; border-radius: 999px; color: var(--ink); font-size: 12px; font-weight: 700; white-space: nowrap; transition: background .2s ease, transform .2s ease; }
+.category-ribbon a:hover { background: #fff9a6; transform: translateY(-1px); }
+.category-icon { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 50%; background: #fff7a5; color: var(--ink); font-size: 17px; font-style: normal; line-height: 1; }
+.category-ribbon a:nth-child(2n) .category-icon { background: #ffe3ce; color: var(--orange); }
+.category-ribbon a:nth-child(3n) .category-icon { background: #eee5ff; color: #8154c7; }
+
+/* Featured lot and catalogue cards */
+.featured-lot {
+  max-width: 1360px;
+  margin-bottom: 68px;
+  border-color: var(--ink);
+  border-radius: 21px;
+  background: #fff;
+  box-shadow: 8px 9px 0 var(--lime), 0 14px 30px rgba(29,34,43,.1);
+}
+.featured-image-wrap { background: linear-gradient(145deg, #efe5ff, #bca3ef); }
+.featured-image-wrap img { object-position: center; }
+.image-vignette { background: linear-gradient(180deg, rgba(29,34,43,.24), transparent 42%, rgba(29,34,43,.65)); }
+.featured-image-top { color: rgba(255,255,255,.9); }
+.image-source-tag { border-color: rgba(255,255,255,.6); color: #fff; }
+.lot-chip { background: var(--lime); color: var(--ink); font-weight: 800; }
+.heart-button { border-color: rgba(255,255,255,.72); background: rgba(29,34,43,.22); }
+.featured-detail { background: #fff; }
+.featured-kicker { color: #96979c; font-family: var(--sans); font-weight: 700; }
+.featured-detail h2 { color: var(--ink); font-weight: 850; }
+.featured-subtitle { color: #73767d; font-family: var(--sans); }
+.featured-tags span, .lot-tags span { border-color: var(--line); color: #6f7278; background: #fff; }
+.featured-price small, .featured-timer small { color: #9b9da2; font-family: var(--sans); font-weight: 700; }
+.featured-price strong { color: var(--orange); font-weight: 850; }
+.featured-price span, .featured-timer span { color: #7a7c82; }
+.featured-timer { border-left-color: var(--line); }.featured-timer strong { color: var(--ink); font-weight: 800; }
+.primary-button { background: var(--orange); color: #fff; font-family: var(--sans); font-weight: 800; }.primary-button:hover { background: #e27617; }
+.secondary-button { background: var(--lime); color: var(--ink); font-family: var(--sans); font-weight: 800; }
+.outline-button { border-color: var(--ink); color: var(--ink); font-family: var(--sans); font-weight: 700; }
+.outline-button:hover { border-color: var(--orange); color: var(--orange); }
+.deposit-line { border-top-color: var(--line); color: #73767d; font-family: var(--sans); }.deposit-line b, .deposit-icon { color: var(--orange); }
+.deposit-line button { color: var(--orange); font-family: var(--sans); }
+.ai-live-strip { border-color: rgba(242,138,36,.23); background: #fff9c7; color: var(--ink); }.ai-live-strip strong { color: var(--ink); }.ai-live-strip small { color: #73767d; }.ai-live-strip > b { background: var(--orange); color: #fff; }
+
+.lots-section, .market-lower { max-width: 1360px; }
+.section-eyebrow { color: #a1a2a5; font-family: var(--sans); font-weight: 800; }
+.lots-heading h2, .panel-heading h2 { color: var(--ink); font-weight: 850; }
+.lots-heading h2 span { color: #a1a2a5; }
+.sort-control { color: #73767d; font-family: var(--sans); font-weight: 700; }
+.sort-control select, .refresh-button { border-color: var(--line-dark); background: #fff; color: var(--ink); }
+.status-tabs { border-bottom-color: var(--line-dark); }.status-tabs button { color: #73767d; font-weight: 700; }.status-tabs button:hover, .status-tabs button.is-active { background: var(--lime); color: var(--ink); }
+.lot-card { border-color: var(--line); border-radius: 14px; background: #fff; box-shadow: 0 7px 20px rgba(29,34,43,.06); }.lot-card:hover { border-color: var(--orange); box-shadow: 0 13px 29px rgba(242,138,36,.16); }
+.lot-card-chw { border-color: rgba(129,84,199,.55); }.lot-card-image { background: linear-gradient(145deg, #eee5ff, #c5b0f2); }.lot-card-image::after { background: linear-gradient(180deg, rgba(29,34,43,.06), transparent 45%, rgba(29,34,43,.62)); }
+.card-top { color: rgba(255,255,255,.96); }.card-status { background: var(--lime); border-color: var(--ink); color: var(--ink); font-weight: 800; }.card-status.soon { background: #ffe1c9; }.card-status.ended { background: #fff; }
+.card-heart { color: #fff; }.card-heart:hover, .card-heart.is-saved { color: var(--orange); }
+.lot-card-body h3 { color: var(--ink); font-weight: 800; }.lot-card-subtitle { color: #73767d; }.card-price-row { border-top-color: var(--line); }.card-price-row small, .card-time small { color: #9b9da2; }.card-price-row strong { color: var(--orange); font-weight: 850; }.card-time strong { color: var(--ink); font-weight: 700; }.card-open { border-top-color: var(--line); color: #73767d; font-family: var(--sans); font-weight: 700; }.card-open span { color: var(--orange); }
+.load-more { border-color: var(--line-dark); background: #fff; color: #73767d; font-family: var(--sans); font-weight: 700; }.load-more:hover { border-color: var(--orange); color: var(--orange); }
+.activity-panel, .guide-panel { border-color: var(--line); background: #fff; box-shadow: 0 7px 20px rgba(29,34,43,.06); }.guide-panel { background: var(--ink); box-shadow: 9px 9px 0 var(--lime); }.activity-list, .activity-item { border-color: var(--line); }.activity-avatar { background: #fff9c7; color: var(--orange); }.activity-main strong { color: var(--ink); }.activity-main span { color: #96979c; }.activity-price { color: var(--orange); }.activity-time { color: #a1a2a5; }.panel-link { color: var(--orange); font-family: var(--sans); font-weight: 800; }.guide-link { color: var(--lime); }
+
+/* Dialogs and fixed navigation */
+.modal-backdrop { background: rgba(29,34,43,.58); }
+.lot-dialog, .deposit-dialog, .rules-dialog, .wallet-dialog { border-color: var(--ink); border-radius: 21px; background: #fff; box-shadow: 9px 10px 0 var(--lime), 0 30px 80px rgba(29,34,43,.27); }
+.modal-image-wrap { background: linear-gradient(145deg, #eadfff, #7551b9); }.modal-thumb { border-color: var(--line); background: #fff9c7; }.modal-thumb.is-active, .modal-thumb:hover { border-color: var(--orange); }.source-caption { color: #8d8f95; }.source-caption a { color: var(--orange); }
+.modal-info h2 { color: var(--ink); font-weight: 850; }.modal-description { color: #73767d; }.attribute-grid { border-color: var(--line); background: var(--line); }.attribute-cell { background: #fff; }.attribute-cell small { color: #9b9da2; }.attribute-cell strong { color: var(--ink); font-weight: 700; }.record-note { border-left-color: var(--orange); background: #fff3e8; }.record-note span { color: var(--orange); }.record-note p { color: #73767d; }
+.bid-box { border-color: rgba(242,138,36,.3); background: #fff9c7; }.bid-box-top strong, .history-amount, .activity-price { color: var(--orange); }.bid-input-row > button { color: var(--orange); }.bid-input-row input { color: var(--ink); }.bid-hint { color: #73767d; }.proxy-row { color: var(--ink); }.proxy-row button { border-color: var(--orange); color: var(--orange); }.ai-console { border-color: rgba(242,138,36,.22); background: #fff; }.ai-console-head { color: var(--ink); }.ai-console-head > b { background: var(--orange); color: #fff; }.ai-meter i { background: linear-gradient(90deg, var(--orange), var(--lime)); }
+.deposit-dialog, .rules-dialog, .wallet-dialog { background: #fffdf1; }.deposit-dialog .primary-button { background: var(--ink); color: var(--lime); }.deposit-summary > div, .rules-grid > div { background: #fff9c7; }.deposit-summary strong, .wallet-lines b { color: var(--orange); }.rules-grid b { color: var(--orange); }.rules-alert { background: #fff1e4; }.wallet-card { background: var(--ink); }.wallet-card strong { color: var(--lime); }
+.auction-dock { left: calc(237px + clamp(18px, 4vw, 64px)); border-color: var(--ink); border-radius: 19px; background: #fff; box-shadow: 8px 9px 0 var(--lime), 0 14px 30px rgba(29,34,43,.13); }.dock-hammer { background: var(--orange); }.dock-price strong { color: var(--orange); }.dock-bid { background: var(--lime); color: var(--ink); font-weight: 850; }.dock-bid:hover { background: var(--orange); color: #fff; }
+.bottom-nav { background: rgba(255,255,255,.97); }.bottom-nav a:hover, .bottom-nav a.is-active, .bottom-nav button:hover { color: var(--orange); }.bottom-nav button:nth-child(3) span { display: grid; place-items: center; width: 32px; height: 32px; margin-top: -11px; border: 2px solid var(--ink); border-radius: 50%; background: var(--lime); color: var(--ink); }
+.toast { background: var(--ink); color: var(--lime); box-shadow: 5px 5px 0 var(--orange); }
+
+@media (max-width: 900px) {
+  .topbar { height: 70px; background: var(--ink); }
+  .app-layout { min-height: calc(100vh - 70px); }
+  .sidebar { display: none; }
+  .main-content { padding-top: 0; }
+  .mobile-panel { top: 70px; background: rgba(29,34,43,.98); }
+  .market-intro { display: block; min-height: 0; margin-bottom: 16px; padding: 38px 28px 30px; border-radius: 0 0 22px 22px; }
+  .market-status { width: fit-content; margin-top: 20px; }
+  .hero-phone-preview { display: none; }
+  .category-ribbon { margin-inline: 18px; }
+  .featured-lot { padding: 0; }
+  .auction-dock { left: 18px; }
+}
+
+@media (max-width: 620px) {
+  .topbar { height: 63px; padding-inline: 12px; }
+  .brand-mark { width: 30px; height: 30px; padding: 4px 3px; }
+  .brand-mark i { width: 4px; }.brand-mark i:nth-child(1) { height: 9px; }.brand-mark i:nth-child(2) { height: 16px; }.brand-mark i:nth-child(3) { height: 21px; }
+  .mobile-panel { top: 63px; }
+  .market-intro { padding: 31px 17px 24px; }
+  .market-intro h1 { font-size: clamp(38px, 12vw, 56px); }
+  /* The hand-written accent is intentionally desktop-only; keeping it out of
+     the narrow hero avoids a clipped English fragment at the right edge. */
+  .hero-script { display: none; }
+  .category-ribbon { gap: 4px; margin: 0 11px 18px; padding: 7px; border-radius: 14px; }
+  .category-ribbon a { min-height: 39px; padding-right: 9px; font-size: 11px; }
+  .category-icon { width: 28px; height: 28px; font-size: 15px; }
+  .featured-lot { border-radius: 18px; box-shadow: 5px 6px 0 var(--lime), 0 10px 22px rgba(29,34,43,.1); }
+  .featured-image-wrap, .featured-image-wrap img { min-height: 315px; }
+  .lot-card { border-radius: 12px; }
+  .auction-dock { left: 11px; right: 11px; }
+}
+
+/* Keep the live status chip in the quiet lower-left of the landing band so
+   it never sits on top of the phone preview or its auction card. */
+@media (min-width: 901px) {
+  .market-intro .market-status {
+    position: absolute;
+    z-index: 3;
+    right: auto;
+    bottom: 30px;
+    left: clamp(28px, 5vw, 74px);
+    margin: 0;
+  }
+  .hero-phone-preview { z-index: 2; }
+}
+
+@media (max-width: 900px) {
+  .market-intro .market-status { position: static; }
+}
+
+/* The archive name is a single strong label on wide auction cards. A slightly
+   tighter desktop scale keeps “CHW · 紫曜首发” from leaving one orphaned
+   character in the detail column. */
+@media (min-width: 1181px) {
+  .featured-detail h2 {
+    font-size: clamp(32px, 3.35vw, 50px);
+    letter-spacing: -.1em;
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1080px) {
+  /* Keep the compact tablet hero legible when the phone preview is present. */
+  .market-intro .market-status {
+    top: 23px;
+    right: auto;
+    bottom: auto;
+    left: 28px;
+    z-index: 4;
+  }
+  .market-intro > div:first-child { max-width: calc(100% - 190px); padding-top: 28px; }
+  .market-intro::before { right: -116px; bottom: -156px; width: 250px; height: 250px; border-width: 25px; }
+  .market-intro::after { right: 26px; top: 30px; }
+}
+
+@media (min-width: 1081px) {
+  /* On wide screens the status chip sits in the quiet upper-right of the
+     landing band, leaving the CHW descriptor unobstructed below the title. */
+  .market-intro .market-status {
+    top: 24px;
+    right: 28px;
+    bottom: auto;
+    left: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero-script { display: none; }
+}
+
+/* Final placement pass: keep the live marker legible on the yellow band and
+   leave both the CHW descriptor and phone silhouette unobstructed. */
+@media (min-width: 1081px) {
+  .market-intro .market-status {
+    top: 24px;
+    right: 28px;
+    bottom: auto;
+    left: auto;
+  }
 }

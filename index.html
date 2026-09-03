@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f4ed00" />
-    <meta name="description" content="爬拍所｜CHW 紫曜系睫角守宫竞拍市场，提供实时出价、保证金与 AI 代理竞价。" />
+    <meta name="theme-color" content="#1d222b" />
+    <meta name="description" content="爬拍所｜CHW 紫曜系睫角守宫竞拍市场，提供实时出价、保证金与自动代理。" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <title>爬拍所｜睫角守宫竞拍市场</title>
     <link rel="stylesheet" href="styles.css?v=1" />
@@ -14,7 +14,7 @@
       <header class="topbar" id="topbar">
         <a class="brand" href="#top" aria-label="爬拍所首页">
           <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
-          <span class="brand-copy"><b>爬拍所</b><small>GECKO AUCTION HOUSE · 01</small></span>
+          <span class="brand-copy"><b>爬拍所</b><small>爬宠竞拍 · 01</small></span>
         </a>
         <div class="top-search">
           <span aria-hidden="true">⌕</span>
@@ -66,11 +66,33 @@
           <section class="market-intro">
             <div>
               <p class="breadcrumb"><span>AUCTION MARKET</span><i>/</i><span>CHW DROP 01</span></p>
-              <h1>紫色新章，<br /><em>从第一手开始。</em></h1>
-              <p class="intro-copy">CHW 紫曜系首发拍品已入场。看懂基因档案、实时竞价和结算节点，再把喜欢变成领先。</p>
+              <h1>CHW 紫曜系，<br /><em>首场竞拍。</em><span class="hero-script" aria-hidden="true">Purple line</span></h1>
+              <p class="intro-copy">CHW-001 · 薰衣草紫底、深紫侧纹与奶白冠线。</p>
             </div>
-            <div class="market-status"><span class="live-dot"></span><strong>LIVE MARKET</strong><small>CHW DROP 01 · 实时竞价引擎在线</small></div>
+            <div class="market-status"><span class="live-dot"></span><strong>LIVE MARKET</strong><small>CHW DROP 01 · 实时竞价</small></div>
+            <div class="hero-phone-preview" aria-hidden="true">
+              <div class="hero-phone-status"><span>9:41</span><span>● ● ●</span></div>
+              <div class="hero-phone-head"><b>主页</b><span>关注</span></div>
+              <div class="hero-phone-search"><span>⌕</span>关键词搜索</div>
+              <div class="hero-phone-cats"><i>守宫</i><i>蜥蜴</i><i>蛇类</i><i>龟类</i></div>
+              <div class="hero-phone-lot" data-image-frame data-fallback="CHW 紫曜系">
+                <img src="assets/chw.jpeg" alt="CHW 紫曜系拍品预览" loading="eager" decoding="async" />
+                <div><strong>CHW 紫曜系</strong><span>¥ 3,680 · 08:42:16</span></div>
+              </div>
+              <div class="hero-phone-nav"><span>首页</span><span>竞拍</span><b>＋</b><span>排行</span><span>我的</span></div>
+            </div>
           </section>
+
+          <nav class="category-ribbon" aria-label="爬宠分类">
+            <a href="#lots"><i class="category-icon category-all">✦</i><span>全部</span></a>
+            <a href="#lots"><i class="category-icon category-gecko">◒</i><span>守宫</span></a>
+            <a href="#lots"><i class="category-icon category-lizard">◌</i><span>蜥蜴</span></a>
+            <a href="#lots"><i class="category-icon category-snake">≈</i><span>蛇类</span></a>
+            <a href="#lots"><i class="category-icon category-turtle">⌒</i><span>龟类</span></a>
+            <a href="#lots"><i class="category-icon category-insect">·</i><span>昆虫·节肢</span></a>
+            <a href="#lots"><i class="category-icon category-frog">∿</i><span>蛙类</span></a>
+            <a href="#lots"><i class="category-icon category-supplies">＋</i><span>用品</span></a>
+          </nav>
 
           <section class="featured-lot" id="featured-lot" aria-labelledby="featured-title">
             <div class="featured-image-wrap" data-image-frame>
@@ -90,7 +112,7 @@
               </div>
               <div class="featured-actions"><button class="primary-button" type="button" id="featured-bid">立即竞价 <span>↗</span></button><button class="outline-button" type="button" id="featured-detail-button">查看完整档案</button></div>
               <div class="deposit-line"><span class="deposit-icon">◈</span><span>参与本场需冻结保证金 <b id="featured-deposit">¥ 50</b></span><button type="button" id="featured-rule-button">规则</button></div>
-              <div class="ai-live-strip" id="featured-ai-strip"><span class="ai-pulse"></span><div><strong>AI 竞价引擎在线</strong><small>3 个代理席位 · 按价带逐手响应</small></div><b id="featured-ai-count">3 SEATS</b></div>
+              <div class="ai-live-strip" id="featured-ai-strip"><span class="ai-pulse"></span><div><strong>自动应价已开启</strong><small>3 个竞买席位 · 按加价幅度响应</small></div><b id="featured-ai-count">3 席位</b></div>
             </div>
           </section>
 
@@ -111,8 +133,8 @@
               <button class="panel-link" type="button" id="activity-more">查看全部出价记录 <span>↗</span></button>
             </div>
             <div class="guide-panel">
-              <p class="section-eyebrow">HOW IT WORKS / AI BID</p>
-              <h2>三步，<br /><em>把喜欢变成领先。</em></h2>
+              <p class="section-eyebrow">HOW IT WORKS / BIDDING</p>
+              <h2>三步完成<br /><em>一场竞拍。</em></h2>
               <div class="guide-steps"><div><b>01</b><span>冻结保证金</span><small>参与出价前完成保证金确认</small></div><div><b>02</b><span>按手出价</span><small>每次至少高于当前价一个加价幅度</small></div><div><b>03</b><span>中拍结算</span><small>最高出价者进入订单确认节点</small></div></div>
               <button class="guide-link" type="button" id="guide-rules">查看完整竞拍规则 <span>↗</span></button>
             </div>
@@ -128,7 +150,7 @@
         <button class="modal-close" type="button" data-close-modal aria-label="关闭">×</button>
         <div class="lot-dialog-grid">
           <div class="modal-gallery">
-            <div class="modal-image-wrap" data-image-frame><img id="modal-image" src="assets/chw.jpeg" alt="" /><div class="image-vignette"></div><span class="modal-image-label" id="modal-image-label">CHW / PURPLE LINE</span></div>
+            <div class="modal-image-wrap" data-image-frame><img id="modal-image" src="assets/chw.jpeg" alt="" loading="eager" decoding="async" /><div class="image-vignette"></div><span class="modal-image-label" id="modal-image-label">CHW / PURPLE LINE</span></div>
             <div class="modal-thumbs" id="modal-thumbs"></div>
             <p class="source-caption" id="modal-source"></p>
           </div>
@@ -139,7 +161,7 @@
             <p class="modal-description" id="modal-description"></p>
             <div class="attribute-grid" id="modal-attributes"></div>
             <div class="record-note"><span>档案提示</span><p>图像呈现外观；基因、健康、年龄、性别和运输条件请以卖家发布信息及双方确认内容为准。</p></div>
-            <div class="bid-box"><div class="bid-box-top"><span>当前价</span><strong id="modal-price">¥ 3,680</strong><small id="modal-bid-count">5 次出价</small></div><div class="bid-input-row"><button type="button" id="bid-minus" aria-label="减少一手">−</button><label><span>你的出价</span><input id="bid-input" type="number" inputmode="numeric" step="200" /></label><button type="button" id="bid-plus" aria-label="增加一手">＋</button></div><p class="bid-hint" id="bid-hint">最低出价 ¥ 3,880 · 每手加价 ¥200</p><div class="modal-bid-actions"><button class="secondary-button" type="button" id="modal-deposit-button">先冻结 ¥ 50 保证金</button><button class="primary-button" type="button" id="place-bid-button">确认出价 <span>↗</span></button></div><div class="proxy-row"><label><input type="checkbox" id="proxy-bid" /> <span>开启 AI 自动代理竞价</span></label><button type="button" id="proxy-help">?</button></div><div class="ai-console" id="ai-console"><div class="ai-console-head"><span><i class="ai-pulse"></i> AI 竞价席位</span><b id="ai-seat-count">3</b></div><div class="ai-meter"><i id="ai-progress-bar"></i></div><p id="ai-status">开启后，系统会以最小加价跟进，不超过你设定的心理上限。</p></div></div>
+            <div class="bid-box"><div class="bid-box-top"><span>当前价</span><strong id="modal-price">¥ 3,680</strong><small id="modal-bid-count">5 次出价</small></div><div class="bid-input-row"><button type="button" id="bid-minus" aria-label="减少一手">−</button><label><span>你的出价</span><input id="bid-input" type="number" inputmode="numeric" step="200" /></label><button type="button" id="bid-plus" aria-label="增加一手">＋</button></div><p class="bid-hint" id="bid-hint">最低出价 ¥ 3,880 · 每手加价 ¥200</p><div class="modal-bid-actions"><button class="secondary-button" type="button" id="modal-deposit-button">先冻结 ¥ 50 保证金</button><button class="primary-button" type="button" id="place-bid-button">确认出价 <span>↗</span></button></div><div class="proxy-row"><label><input type="checkbox" id="proxy-bid" /> <span>开启自动代理竞价</span></label><button type="button" id="proxy-help">?</button></div><div class="ai-console" id="ai-console"><div class="ai-console-head"><span><i class="ai-pulse"></i> 自动应价席位</span><b id="ai-seat-count">3</b></div><div class="ai-meter"><i id="ai-progress-bar"></i></div><p id="ai-status">开启后，系统会以最小加价跟进，不超过你设定的心理上限。</p></div></div>
             <div class="modal-links"><button type="button" id="seller-button">进入卖家主页 <span>↗</span></button><button type="button" id="share-button">分享拍品 <span>↗</span></button></div>
           </div>
         </div>

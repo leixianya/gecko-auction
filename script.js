@@ -97,8 +97,49 @@
     Axanthic: { low: 1800, high: 7200, center: 3900, pressure: 0.61 },
     Harlequin: { low: 700, high: 3000, center: 1550, pressure: 0.55 }
   };
-  var aiStyles = ['稳健型', '节奏型', '收藏型', '观察型'];
-  var aiBidderNames = ['紫曜策略·A', '紫曜策略·B', '紫曜策略·C'];
+  var aiStyles = ['稳健跟价', '分段跟价', '收藏节奏', '谨慎观察'];
+
+  /*
+   * Rival handles are deliberately ordinary community-style names.  The
+   * response engine still marks its own bids internally with `ai: true`, but
+   * the market surface presents the same kind of nickname a real bidder would
+   * choose.  A seeded pick keeps one bidder's identity stable while cards,
+   * activity and the archive re-render.
+   */
+  var realisticBidderNames = [
+    '椰岛阿森', '南风不渡', '雨林小周', '海盐同学', '山海拾光', '岛上有风',
+    '一只阿野', '云岭看守宫', '青柠汽水', '晚风入岛', '林间慢养', '小满在路上',
+    '北纬十八度', '雾岛听潮', '月白先生', '橘子海边', '森屿阿哲', '落日拾荒者',
+    '阿野的爬箱', '海风吹过来', '椰城小陈', '养爬的老胡', '叶子同学', '晴天不晒背',
+    '山猫不困', '周末看守宫', '小岛慢慢', '风铃与尾巴', '白桃乌龙', '南岛观察员',
+    '石榴树下', '一枚青柠', '小兽医日记', '云端玩家', '海口阿杰', '万宁看海',
+    '不急慢养', '灰阶玩家', '树洞里的叶子', '小林有只守宫', '夜航船', '岛民阿远',
+    '海边捡贝壳', '林下有光', '阿洛在雨林', '一只小胖', '北岸玩家', '月亮不营业',
+    '花卷不卷', '青山见我', '雨夜听潮', '椰汁半糖', '海风和蜥蜴', '小周的箱子',
+    '山里来的', '白昼收藏家', '蓝莓气泡', '南风过境', '晚点再说', '小岛居民',
+    '阿满养爬', '微光拾贝', '一口椰子冰', '海盐苏打', '林深见鹿', '慢慢看尾巴'
+  ];
+
+  function rivalNameFor(lot, sequence) {
+    var key = (lot && lot.id ? lot.id : 'GX') + '|rival-handle|' + Number(sequence || 0);
+    var first = hashNumber(key) % realisticBidderNames.length;
+    /* The extra stride makes adjacent response seats distinct even when two
+       lot hashes happen to land next to each other in the name pool. */
+    var index = (first + Number(sequence || 0) * 7) % realisticBidderNames.length;
+    return realisticBidderNames[index];
+  }
+
+  function displayBidderName(name, lot, sequence) {
+    var value = String(name == null ? '' : name);
+    /* Sessions created before the handle pool used strategy labels.  Map
+       those records at render time so a refreshed page has one consistent
+       visual language without invalidating a user's saved bid history. */
+    if (/(?:紫曜策略|策略席位|\bAI\b)/i.test(value)) {
+      var legacyIndex = hashNumber((lot && lot.id ? lot.id : 'GX') + '|legacy-handle|' + value) % realisticBidderNames.length;
+      return realisticBidderNames[legacyIndex];
+    }
+    return value || rivalNameFor(lot, sequence);
+  }
 
   function hashNumber(value) {
     var text = String(value == null ? '' : value);
@@ -214,8 +255,11 @@
     ['玄岩 Sable', 'Sable', 2940, '玄色基底与背脊纵深', '母', '2024', '雾岛基因社']
   ];
 
-  var bidderNames = ['雨林观察员', '海盐玩家', 'WNN·Kai', '岛屿收藏家', 'Luma', '南风', '灰阶档案', '椰林来客'];
-  var proxyNames = ['雨林观察员', '海盐玩家', 'WNN·Kai', '岛屿收藏家'];
+  /* Seeded handles also populate the historical rows generated on first
+     load.  Keeping one shared pool makes initial bids and later responses
+     feel like the same active community. */
+  var bidderNames = realisticBidderNames;
+  var proxyNames = realisticBidderNames;
   var profileFallback = '睫角守宫拍品';
 
   function scheduleFor(index) {
@@ -355,7 +399,17 @@
              ¥200 to ¥300 after ¥5,000; otherwise a refresh can show and
              accept the wrong next bid. */
           lot.increment = incrementForLot(lot);
-          if (Array.isArray(savedLot.bids) && savedLot.bids.length) lot.bids = savedLot.bids;
+          if (Array.isArray(savedLot.bids) && savedLot.bids.length) {
+            lot.bids = savedLot.bids.map(function (savedBid, bidIndex) {
+              var bid = Object.assign({}, savedBid);
+              if (!isCurrentUserBid(bid)) bid.bidder = displayBidderName(bid.bidder, lot, bidIndex);
+              /* Older sessions used a visible strategy label.  Keep the
+                 internal marker for response logic while normalising the
+                 public activity label. */
+              if (bid.label === '策略应价') bid.label = '自动应价';
+              return bid;
+            });
+          }
           if (Number(savedLot.proxyMax) > 0) lot.proxyMax = Number(savedLot.proxyMax);
           if (savedLot.botMax) lot.botMax = Number(savedLot.botMax);
           if (Number(savedLot.aiBudget) > 0) lot.aiBudget = Number(savedLot.aiBudget);
@@ -472,6 +526,33 @@
     'https://raw.githubusercontent.com/leixianya/gecko-auction/f6d64b66e02629d14d79af84958b4ae879467545/assets/'
   ];
   var imageCandidates = typeof WeakMap === 'function' ? new WeakMap() : null;
+  var imageRequestSerial = 0;
+
+  /* A cached image can be selected repeatedly without emitting a fresh load
+     event in some embedded/WebKit hosts. Compare resolved URLs (without
+     cache-busting parameters) and explicitly restore the visible state when
+     the resource is already decoded. */
+  function canonicalImageUrl(src) {
+    var value = String(src || '');
+    if (!value) return '';
+    try {
+      var parsed = new URL(value, document.baseURI);
+      parsed.search = '';
+      parsed.hash = '';
+      return parsed.href;
+    } catch (error) {
+      return value.split('?')[0].split('#')[0];
+    }
+  }
+
+  function markImageLoaded(image, state) {
+    if (!image) return;
+    if (state && imageCandidates && imageCandidates.get(image) !== state) return;
+    image.dataset.imageState = 'loaded';
+    image.style.opacity = '';
+    var frame = image.closest('[data-image-frame]');
+    if (frame) frame.classList.remove('image-failed');
+  }
 
   function imageFileName(src) {
     var clean = String(src || '').split('?')[0].split('#')[0];
@@ -509,10 +590,15 @@
   function tryNextImage(image) {
     if (!image) return;
     var state = imageCandidates && imageCandidates.get(image);
+    /* A quick switch between archive angles can leave a cancelled request
+       reporting an error after the next angle has already been assigned.  Do
+       not let that stale event advance the new candidate list. */
+    if (state && state.requestId && String(state.requestId) !== String(image.dataset.imageRequest || '')) return;
     if (!state) {
-      state = { list: candidatesFor(image.getAttribute('src')), index: 0, exhausted: false };
+      state = { list: candidatesFor(image.getAttribute('src')), index: 0, exhausted: false, requestId: image.dataset.imageRequest || '' };
       if (imageCandidates) imageCandidates.set(image, state);
     }
+    if (state.exhausted) return;
     state.index += 1;
     if (state.index >= state.list.length) {
       state.exhausted = true;
@@ -529,31 +615,66 @@
 
   function setImage(image, src, alt, fallback) {
     if (!image) return;
-    wireImage(image);
+    var requested = String(src || '');
+    if (!/^(?:https?:|data:|blob:|\/)/i.test(requested)) requested = assetUrl(requested);
     var frame = image.closest('[data-image-frame]');
     if (frame) {
       frame.classList.remove('image-failed');
       frame.setAttribute('data-fallback', fallback || profileFallback);
     }
     image.alt = alt || fallback || profileFallback;
+    var requestId = String(++imageRequestSerial);
+    image.dataset.imageRequest = requestId;
+    var state = { list: candidatesFor(requested), index: 0, exhausted: false, requestId: requestId };
+    if (imageCandidates) imageCandidates.set(image, state);
+    var target = state.list[0] || requested;
+    var current = image.currentSrc || image.src || image.getAttribute('src') || '';
+    var sameLoadedImage = image.naturalWidth > 0 && canonicalImageUrl(current) === canonicalImageUrl(target);
+    /* Wire after replacing the request state so a synchronously completed
+       cached image is associated with this selection, not the old one. */
+    wireImage(image);
+    if (sameLoadedImage) {
+      markImageLoaded(image, state);
+      return;
+    }
     image.dataset.imageState = 'loading';
     image.style.opacity = '0';
-    var state = { list: candidatesFor(src), index: 0, exhausted: false };
-    if (imageCandidates) imageCandidates.set(image, state);
-    image.src = state.list[0] || src;
+    image.src = target;
+    /* Some hosts complete memory-cache loads without dispatching a new event.
+       Resolve that case on the next task, while guarding against a newer
+       angle selection. */
+    window.setTimeout(function () {
+      if (imageCandidates && imageCandidates.get(image) !== state) return;
+      var liveSrc = image.currentSrc || image.src || image.getAttribute('src') || '';
+      if (image.naturalWidth > 0 && canonicalImageUrl(liveSrc) === canonicalImageUrl(target)) {
+        markImageLoaded(image, state);
+      } else if (image.complete && image.naturalWidth === 0) {
+        tryNextImage(image);
+      }
+    }, 0);
   }
 
   function wireImage(image) {
     if (!image || image.dataset.fallbackWired === '1') return;
     image.dataset.fallbackWired = '1';
     image.addEventListener('load', function () {
-      image.dataset.imageState = 'loaded';
-      image.style.opacity = '';
-      var frame = image.closest('[data-image-frame]');
-      if (frame) frame.classList.remove('image-failed');
+      var state = imageCandidates && imageCandidates.get(image);
+      if (state && state.requestId && String(state.requestId) !== String(image.dataset.imageRequest || '')) return;
+      if (state && state.list && state.list[state.index] && canonicalImageUrl(image.currentSrc || image.src) !== canonicalImageUrl(state.list[state.index])) return;
+      markImageLoaded(image, state);
     });
     image.addEventListener('error', function () { tryNextImage(image); });
-    if (image.complete && image.naturalWidth === 0) window.setTimeout(function () { tryNextImage(image); }, 0);
+    if (image.complete) {
+      var requestAtWire = image.dataset.imageRequest || '';
+      var sourceAtWire = image.currentSrc || image.src || image.getAttribute('src') || '';
+      window.setTimeout(function () {
+        var state = imageCandidates && imageCandidates.get(image);
+        if (requestAtWire && state && String(state.requestId || '') !== String(requestAtWire)) return;
+        var currentSrc = image.currentSrc || image.src || image.getAttribute('src') || '';
+        if (image.naturalWidth > 0 && (!state || !state.list || !state.list[state.index] || canonicalImageUrl(currentSrc) === canonicalImageUrl(state.list[state.index]))) markImageLoaded(image, state);
+        else if (image.naturalWidth === 0 && image.complete && canonicalImageUrl(currentSrc) === canonicalImageUrl(sourceAtWire) && (!state || state.index === 0)) tryNextImage(image);
+      }, 0);
+    }
   }
 
   function statusCounts() {
@@ -627,7 +748,7 @@
         '<div class="card-bottom"><span class="card-status ' + status + '">' + statusLabel(status) + '</span><button class="card-heart' + (favorite ? ' is-saved' : '') + '" type="button" data-favorite="' + esc(lot.id) + '" aria-label="' + (favorite ? '取消收藏' : '收藏拍品') + '">' + (favorite ? '♥' : '♡') + '</button></div>' +
       '</div>' +
       '<div class="lot-card-body"><h3>' + esc(lot.title) + '</h3><p class="lot-card-subtitle">' + esc(lot.focus) + '</p>' +
-      '<div class="lot-tags">' + lot.tags.slice(0, 3).map(function (tag) { return '<span>' + esc(tag) + '</span>'; }).join('') + (isChw ? '<span class="ai-card-tag">AI 竞价</span>' : '') + '</div>' +
+      '<div class="lot-tags">' + lot.tags.slice(0, 3).map(function (tag) { return '<span>' + esc(tag) + '</span>'; }).join('') + (isChw ? '<span class="ai-card-tag">自动应价</span>' : '') + '</div>' +
       '<div class="card-price-row"><div><small>当前价</small><strong>' + money(lot.price) + '</strong></div><div class="card-time"><small>' + (status === 'soon' ? '开场倒计时' : (status === 'ended' ? '成交状态' : '距结束')) + '</small><strong class="' + status + '" data-countdown="' + esc(lot.id) + '">' + remainingText(lot, true) + '</strong></div></div>' +
       '<button class="card-open" type="button" data-open-lot="' + esc(lot.id) + '"><span>查看拍品档案</span><span>↗</span></button></div></article>';
   }
@@ -689,7 +810,7 @@
     if (!lot) return;
     var seats = lot.morph === 'CHW' ? 3 : 2;
     var featuredCount = $('featured-ai-count');
-    if (featuredCount) featuredCount.textContent = seats + ' SEATS';
+    if (featuredCount) featuredCount.textContent = seats + ' 席位';
     var dockTitle = $('dock-title');
     var dockPrice = $('dock-price');
     var dockCountdown = $('dock-countdown');
@@ -698,9 +819,9 @@
     if (dockCountdown) dockCountdown.textContent = remainingText(lot, true);
   }
 
-  /* The modal has its own AI console. It is intentionally separate from the
-     hero/dock indicators because the hero keeps ticking while another lot's
-     archive is open. */
+  /* The modal has its own response console. It is intentionally separate from
+     the hero/dock indicators because the hero keeps ticking while another
+     lot's archive is open. */
   function renderModalAiIndicators(lot) {
     if (!lot) return;
     var budget = aiBudgetFor(lot);
@@ -716,8 +837,8 @@
     if (status) {
       var responseCount = Number(lot.aiResponses || 0);
       status.textContent = lot.proxyMax
-        ? '你的心理上限 ' + money(lot.proxyMax) + ' 已接入；AI 会在需要时逐手跟价。'
-        : (responseCount ? '已完成 ' + responseCount + ' 次策略应价 · 当前预算上限 ' + money(budget) : '开启后，系统会以最小加价跟进，不超过你设定的心理上限。');
+        ? '你的心理上限 ' + money(lot.proxyMax) + ' 已接入；需要时按最小加价跟进。'
+        : (responseCount ? '已完成 ' + responseCount + ' 次自动应价 · 当前上限 ' + money(budget) : '开启后，系统会以最小加价跟进，不超过你设定的心理上限。');
     }
   }
 
@@ -728,17 +849,20 @@
     if (!entries.length) {
       lots.forEach(function (lot) {
         lot.bids.slice(-2).forEach(function (bid) {
-          entries.push({ lotId: lot.id, title: lot.title, bidder: bid.bidder, amount: bid.amount, at: bid.at, ai: !!bid.ai, label: bid.ai ? '策略应价' : (bid.proxy ? '自动代理' : '现场出价') });
+          entries.push({ lotId: lot.id, title: lot.title, bidder: bid.bidder, amount: bid.amount, at: bid.at, ai: !!bid.ai, label: bid.ai ? '自动应价' : (bid.proxy ? '自动代理' : '现场出价') });
         });
       });
       entries.sort(function (a, b) { return b.at - a.at; });
     }
     var limit = activityExpanded ? 12 : 6;
     list.innerHTML = entries.slice(0, limit).map(function (entry) {
-      var initials = String(entry.bidder || '竞').slice(0, 2);
+      var lot = getLot(entry.lotId);
+      var bidderName = displayBidderName(entry.bidder, lot, entry.at);
+      var initials = String(bidderName || '竞').slice(0, 2);
       var ago = Math.max(1, Math.floor((Date.now() - Number(entry.at || Date.now())) / 60000));
-      var aiMark = entry.ai || entry.label === '策略应价' ? '<i class="ai-badge">AI</i>' : '';
-      return '<div class="activity-item' + (aiMark ? ' is-ai' : '') + '"><span class="activity-avatar">' + esc(initials) + '</span><div class="activity-main"><strong>' + esc(entry.bidder) + ' ' + aiMark + '</strong><span>' + esc(entry.title) + ' · ' + esc(entry.label || '现场出价') + '</span></div><b class="activity-price">' + money(entry.amount) + '</b><small class="activity-time">' + (ago < 60 ? ago + ' 分钟前' : Math.floor(ago / 60) + ' 小时前') + '</small></div>';
+      var autoMark = entry.ai || entry.label === '自动应价' ? '<i class="ai-badge">自动</i>' : '';
+      var label = entry.label === '策略应价' ? '自动应价' : (entry.label || '现场出价');
+      return '<div class="activity-item' + (autoMark ? ' is-ai' : '') + '"><span class="activity-avatar">' + esc(initials) + '</span><div class="activity-main"><strong>' + esc(bidderName) + ' ' + autoMark + '</strong><span>' + esc(entry.title) + ' · ' + esc(label) + '</span></div><b class="activity-price">' + money(entry.amount) + '</b><small class="activity-time">' + (ago < 60 ? ago + ' 分钟前' : Math.floor(ago / 60) + ' 小时前') + '</small></div>';
     }).join('');
     var more = $('activity-more');
     if (more) more.textContent = activityExpanded ? '收起出价记录 ↑' : '查看全部出价记录 ↗';
@@ -898,9 +1022,10 @@
     var ranked = Object.keys(byBidder).map(function (name) { return byBidder[name]; }).sort(function (a, b) { return b.amount - a.amount || b.at - a.at; });
     list.innerHTML = ranked.slice(0, 10).map(function (bid, index) {
       var isMe = bid.bidder === '你' || bid.bidder === '你（代理）';
-      var flag = bid.ai ? '策略应价' : (bid.proxy ? '代理' : (index === 0 ? '领先' : '出价'));
-      var aiMark = bid.ai ? '<i class="ai-badge">AI</i>' : '';
-      return '<div class="history-row' + (bid.ai ? ' is-ai' : '') + '"><span class="history-rank">' + String(index + 1).padStart(2, '0') + '</span><span class="history-name">' + esc(bid.bidder) + ' ' + aiMark + '<small>' + (isMe ? '当前账户' : (bid.ai ? '策略席位 · 信用 100' : '竞买人')) + '</small></span><span class="history-flag">' + esc(flag) + '</span><b class="history-amount">' + money(bid.amount) + '</b></div>';
+      var flag = bid.ai ? '自动应价' : (bid.proxy ? '代理' : (index === 0 ? '领先' : '出价'));
+      var bidderName = displayBidderName(bid.bidder, lot, bid.at || index);
+      var autoMark = bid.ai ? '<i class="ai-badge">自动</i>' : '';
+      return '<div class="history-row' + (bid.ai ? ' is-ai' : '') + '"><span class="history-rank">' + String(index + 1).padStart(2, '0') + '</span><span class="history-name">' + esc(bidderName) + ' ' + autoMark + '<small>' + (isMe ? '当前账户' : (bid.ai ? '竞买席位 · 信用 100' : '竞买人')) + '</small></span><span class="history-flag">' + esc(flag) + '</span><b class="history-amount">' + money(bid.amount) + '</b></div>';
     }).join('');
   }
 
@@ -911,7 +1036,7 @@
     var isPrimary = currentFile === imageFileName(lot.image);
     if ($('modal-image-label')) $('modal-image-label').textContent = isChw ? 'CHW / PURPLE LINE' : 'ARCHIVE ANGLE / COMMONS';
     if ($('modal-source')) $('modal-source').innerHTML = isChw
-      ? '拍品主图：AI 生成视觉素材 · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看素材说明 ↗</a>'
+      ? '拍品主图：紫曜系资料图 · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看素材说明 ↗</a>'
       : (isPrimary ? '拍品图片档案：Wikimedia Commons · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看作者与许可信息 ↗</a>' : '角度资料图：Wikimedia Commons · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看作者与许可信息 ↗</a>');
   }
 
@@ -938,8 +1063,7 @@
   }
 
   function aiBidderFor(lot) {
-    if (lot && lot.morph === 'CHW') return aiBidderNames[Number(lot.aiResponses || 0) % aiBidderNames.length];
-    return proxyNames[hashNumber(lot.id + '|rival|' + Number(lot.aiResponses || 0)) % proxyNames.length];
+    return rivalNameFor(lot, Number(lot && lot.aiResponses || 0));
   }
 
   function aiCanRespond(lot, triggerAmount, round) {
@@ -1024,6 +1148,11 @@
   function openLot(id) {
     var lot = getLot(id);
     if (!lot) return;
+    /* The dialog itself is scrollable.  A previous archive (or the browser's
+       automatic focus scroll) can leave it part-way down, which makes the
+       gallery appear blank even though the image is loaded above the fold. */
+    var lotDialog = document.querySelector('.lot-dialog');
+    if (lotDialog) lotDialog.scrollTop = 0;
     activeLotId = id;
     var profile = geneProfiles[lot.morph];
     var modalImage = $('modal-image');
@@ -1055,7 +1184,8 @@
     var thumbs = $('modal-thumbs');
     if (thumbs) {
       thumbs.innerHTML = lot.gallery.map(function (file, index) {
-        return '<button class="modal-thumb' + (index === 0 ? ' is-active' : '') + '" type="button" data-thumb="' + esc(assetUrl(file)) + '" data-alt="' + esc(lot.title + ' 角度 ' + (index + 1)) + '"><img src="' + esc(assetUrl(file)) + '" alt="' + esc(lot.title + ' 角度 ' + (index + 1)) + '" loading="lazy" /></button>';
+        var angle = lot.title + ' 角度 ' + (index + 1);
+        return '<button class="modal-thumb' + (index === 0 ? ' is-active' : '') + '" type="button" data-image-frame data-fallback="' + esc('角度 ' + (index + 1)) + '" data-thumb-file="' + esc(file) + '" data-thumb="' + esc(assetUrl(file)) + '" data-alt="' + esc(angle) + '" aria-label="切换至' + esc(angle) + '"><img src="' + esc(assetUrl(file)) + '" alt="' + esc(angle) + '" loading="eager" decoding="async" /></button>';
       }).join('');
       queryAll('.modal-thumb img', thumbs).forEach(wireImage);
     }
@@ -1063,7 +1193,24 @@
     renderModalAiIndicators(lot);
     renderHistory(lot);
     openModal('lot-modal');
-    window.setTimeout(function () { if ($('bid-input') && statusOf(lot) === 'live') $('bid-input').focus(); }, 260);
+    if (lotDialog) lotDialog.scrollTop = 0;
+    window.setTimeout(function () {
+      if (!$('bid-input') || statusOf(lot) !== 'live') return;
+      /* Keep the gallery at the top while still making keyboard bidding fast.
+         `preventScroll` is supported by current browsers; the fallback
+         restores the dialog position for older embedded WebViews. */
+      var before = lotDialog ? lotDialog.scrollTop : 0;
+      try {
+        $('bid-input').focus({ preventScroll: true });
+      } catch (error) {
+        $('bid-input').focus();
+        if (lotDialog) lotDialog.scrollTop = before;
+      }
+      if (lotDialog) {
+        lotDialog.scrollTop = 0;
+        window.setTimeout(function () { lotDialog.scrollTop = 0; }, 0);
+      }
+    }, 260);
   }
 
   function openDeposit(id) {
@@ -1151,7 +1298,7 @@
       lot.aiResponses = Number(lot.aiResponses || 0) + 1;
       lot.aiLastResponseAt = bid.at;
     }
-    addActivity(lot, bid, bid.ai ? '策略应价' : (proxy ? '自动代理' : '现场出价'));
+    addActivity(lot, bid, bid.ai ? '自动应价' : (proxy ? '自动代理' : '现场出价'));
     return bid;
   }
 
@@ -1385,7 +1532,10 @@
       var thumb = event.target.closest('[data-thumb]');
       if (thumb) {
         var modalImage = $('modal-image');
-        setImage(modalImage, thumb.dataset.thumb, thumb.dataset.alt, thumb.dataset.alt);
+        /* Prefer the raw filename so an inline host cannot accidentally
+           prepend its asset base twice.  Keep data-thumb as a compatibility
+           fallback for links created by older cached bundles. */
+        setImage(modalImage, thumb.dataset.thumbFile || thumb.dataset.thumb, thumb.dataset.alt, thumb.dataset.alt);
         queryAll('.modal-thumb').forEach(function (item) { item.classList.toggle('is-active', item === thumb); });
         renderModalSource(getLot(activeLotId), thumb.dataset.thumb);
       }
@@ -1432,6 +1582,9 @@
     /* Resolve already-finished lots before the first wallet render. */
     settleEndedLots();
     bindEvents();
+    /* The compact app preview is a real image frame too. Wire it before the
+       first render so a cached CHW asset can restore opacity immediately. */
+    queryAll('.hero-phone-lot img').forEach(wireImage);
     syncFilterButtons();
     renderLots();
     renderFeatured();
