@@ -86,7 +86,7 @@
    * Price bands are deliberately broad, page-local reference bands rather
    * than promises about an animal's value.  They keep the generated lots in
    * believable relative positions: Lily White / Axanthic combinations sit
-   * above entry-level Harlequin and Sable examples, while quality and archive
+   * above entry-level Harlequin and Sable lots, while quality and archive
    * notes move an individual within its band.
    */
   var marketBands = {
