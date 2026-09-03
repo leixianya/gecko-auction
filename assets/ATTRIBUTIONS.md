@@ -1,5 +1,9 @@
 # 图片来源与许可
 
+## CHW 首发素材
+
+`chw.jpeg` 为项目方从本地 Downloads 提供的 CHW 紫曜系视觉素材。文件 EXIF 含 AIGC 标记（`ContentProducer: MiniMax`、`ContentPropagator: MiniMax`），未附带可读作者或原帖元数据；页面将其标记为“AI 生成视觉素材”，不将其归入 Wikimedia Commons，也不把画面当作真实个体、真实基因或健康记录。公开发布或商业使用前，请由素材提供方确认生成服务条款及再发布授权。
+
 拍品图片采用 Wikimedia Commons 上明确标注为 Public domain、CC0、CC BY 或 CC BY-SA 的睫角守宫照片。页面中的拍品名称是中性视觉描述，不代表照片中的个体由平台出售，也不据此断言基因、健康、年龄或性别。
 
 使用 CC BY / CC BY-SA 图片时，页面档案会保留作者、许可与原文件页链接；如需将站点用于商业发布，请再次核对每张图片的当前许可和署名要求。
