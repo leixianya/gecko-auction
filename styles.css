@@ -53,7 +53,7 @@ img { display: block; max-width: 100%; }
 .top-actions { display: flex; align-items: center; gap: 14px; margin-left: auto; }
 .top-link { padding: 8px 0; background: transparent; color: var(--muted); font-family: var(--mono); font-size: 10px; letter-spacing: .08em; transition: color .2s ease; }
 .top-link:hover { color: var(--paper); }
-.wallet-button { display: inline-flex; align-items: center; gap: 10px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 11px; }
+.wallet-button { display: inline-flex; align-items: center; gap: 10px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 11px; white-space: nowrap; }
 .wallet-button strong { color: var(--lime); font-family: var(--mono); font-size: 11px; font-weight: 500; }
 .avatar-button { display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid var(--lime); border-radius: 50%; background: var(--lime); color: var(--ink); font-family: var(--mono); font-size: 9px; font-weight: 700; }
 .mobile-menu { display: none; width: 32px; padding: 5px 2px; background: transparent; }
