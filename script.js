@@ -134,7 +134,7 @@
     /* Sessions created before the handle pool used strategy labels.  Map
        those records at render time so a refreshed page has one consistent
        visual language without invalidating a user's saved bid history. */
-    if (/(?:紫曜策略|策略席位|\bAI\b)/i.test(value)) {
+    if (/(?:紫曜策略|策略席位|自动应价席位|\bAI\b|AI竞价|AI代理)/i.test(value)) {
       var legacyIndex = hashNumber((lot && lot.id ? lot.id : 'GX') + '|legacy-handle|' + value) % realisticBidderNames.length;
       return realisticBidderNames[legacyIndex];
     }
@@ -380,7 +380,21 @@
       });
       appState.balance = Math.max(0, appState.balance);
       appState.favorites = Array.isArray(saved.favorites) ? saved.favorites : [];
-      if (Array.isArray(saved.activity)) appState.activity = saved.activity.slice(0, 50);
+      if (Array.isArray(saved.activity)) {
+        appState.activity = saved.activity.slice(0, 50).map(function (entry, entryIndex) {
+          var normalized = Object.assign({}, entry);
+          var activityLot = getLot(normalized.lotId);
+          normalized.bidder = displayBidderName(normalized.bidder, activityLot, normalized.at || entryIndex);
+          var legacyLabel = String(normalized.label || '');
+          if (normalized.ai || /(?:策略应价|AI竞价|AI代理|\bAI\b)/i.test(legacyLabel)) {
+            normalized.ai = true;
+            normalized.label = '自动应价';
+          } else if (legacyLabel === '代理应价') {
+            normalized.label = '自动代理';
+          }
+          return normalized;
+        });
+      }
       appState.orders = Array.isArray(saved.orders) ? saved.orders.map(function (order) {
         var normalized = Object.assign({}, order);
         normalized.deposit = 50;
@@ -406,7 +420,10 @@
               /* Older sessions used a visible strategy label.  Keep the
                  internal marker for response logic while normalising the
                  public activity label. */
-              if (bid.label === '策略应价') bid.label = '自动应价';
+              if (bid.ai || /(?:策略应价|AI竞价|AI代理|\bAI\b)/i.test(String(bid.label || ''))) {
+                bid.ai = true;
+                bid.label = '自动应价';
+              }
               return bid;
             });
           }
