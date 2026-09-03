@@ -461,16 +461,15 @@
    * The mirror list is deliberately bounded: a broken image can never create
    * an endless network loop.
    */
-  /* 35d071e contains the CHW launch image as well as the Commons archive.
-     Keep this revision pinned for deterministic cache and mainland mirrors;
-     update it once a later source commit is published. */
+  /* Pin mirrors to the published source revision for deterministic cache
+     behavior; the revision contains both the CHW launch image and archive. */
   var imageMirrorBases = [
-    'https://cdn.jsdelivr.net/gh/leixianya/gecko-auction@35d071e25257a3c0dc4b6c6642dc2642f2ea86ef/assets/',
-    'https://testingcf.jsdelivr.net/gh/leixianya/gecko-auction@35d071e25257a3c0dc4b6c6642dc2642f2ea86ef/assets/',
-    'https://fastly.jsdelivr.net/gh/leixianya/gecko-auction@35d071e25257a3c0dc4b6c6642dc2642f2ea86ef/assets/',
-    'https://gcore.jsdelivr.net/gh/leixianya/gecko-auction@35d071e25257a3c0dc4b6c6642dc2642f2ea86ef/assets/',
-    'https://quantil.jsdelivr.net/gh/leixianya/gecko-auction@35d071e25257a3c0dc4b6c6642dc2642f2ea86ef/assets/',
-    'https://raw.githubusercontent.com/leixianya/gecko-auction/35d071e25257a3c0dc4b6c6642dc2642f2ea86ef/assets/'
+    'https://cdn.jsdelivr.net/gh/leixianya/gecko-auction@2e9f8066c086e5fddc55bc605983fe8dcc066c09/assets/',
+    'https://testingcf.jsdelivr.net/gh/leixianya/gecko-auction@2e9f8066c086e5fddc55bc605983fe8dcc066c09/assets/',
+    'https://fastly.jsdelivr.net/gh/leixianya/gecko-auction@2e9f8066c086e5fddc55bc605983fe8dcc066c09/assets/',
+    'https://gcore.jsdelivr.net/gh/leixianya/gecko-auction@2e9f8066c086e5fddc55bc605983fe8dcc066c09/assets/',
+    'https://quantil.jsdelivr.net/gh/leixianya/gecko-auction@2e9f8066c086e5fddc55bc605983fe8dcc066c09/assets/',
+    'https://raw.githubusercontent.com/leixianya/gecko-auction/2e9f8066c086e5fddc55bc605983fe8dcc066c09/assets/'
   ];
   var imageCandidates = typeof WeakMap === 'function' ? new WeakMap() : null;
 
