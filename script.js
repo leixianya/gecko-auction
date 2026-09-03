@@ -6,7 +6,13 @@
    * held in the browser only so the whole auction flow can be experienced without
    * a payment service or an account backend.
    */
+  /* Keep the state key stable so returning bidders do not lose their saved
+     deposits or bid history when the catalogue is refreshed.  A fresh
+     browser session starts with no wallet credit; the legacy demo default is
+     recognised below and migrated only when that session was untouched. */
   var STORAGE_KEY = 'gecko-auction-state-v7';
+  var INITIAL_BALANCE = 0;
+  var LEGACY_INITIAL_BALANCE = 2000;
   var moneyFormatter = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 0 });
   var nowAtLoad = Date.now();
   var toastTimer;
@@ -30,18 +36,72 @@
     return assetBase + 'assets/' + value;
   }
 
+  /* Non-CHW lots use locally hosted snapshots of the X/Twitter image set.
+     Keeping the filenames local avoids pbs.twimg.com availability issues in
+     mainland deployments; attribution and original post links live in
+     assets/ATTRIBUTIONS.md.  CHW's own gallery is intentionally handled in
+     createLots() and remains unchanged. */
   var imagePool = [
-    'commons-orange.png', 'commons-tete.png', 'commons-crusted.jpg',
-    'commons-geneve.jpg', 'commons-dalmatien.jpg', 'commons-eveha.jpg',
-    'commons-face.jpg', 'commons-crested.jpg', 'commons-back.jpg',
-    'commons-little.jpg', 'commons-juvenile.jpg', 'commons-mating.jpg',
-    'commons-rhacodactylus.jpg', 'commons-newborn.jpg', 'commons-babies.jpg',
-    'commons-lilb.jpg', 'commons-eye.jpg', 'commons-greco.jpg',
-    'commons-baby.jpg', 'commons-mars.jpg', 'commons-pinstripe.jpg',
-    'commons-yellow.jpg', 'commons-cropped.jpg', 'commons-harlequin.jpg',
-    'commons-aquarium.jpg', 'commons-self.jpg', 'commons-gecko-pl.jpg',
-    'commons-mg5452.jpg', 'commons-mg5440.jpg', 'commons-n01.jpg'
+    'x-gecko-01.jpg', 'x-gecko-02.jpg', 'x-gecko-03.jpg', 'x-gecko-04.jpg',
+    'x-gecko-05.jpg', 'x-gecko-06.jpg', 'x-gecko-07.jpg', 'x-gecko-08.jpg',
+    'x-gecko-09.jpg', 'x-gecko-10.jpg', 'x-gecko-11.jpg', 'x-gecko-12.jpg',
+    'x-gecko-13.jpg', 'x-gecko-14.jpg', 'x-gecko-15.jpg', 'x-gecko-16.jpg',
+    'x-gecko-17.jpg', 'x-gecko-18.jpg', 'x-gecko-19.jpg', 'x-gecko-20.jpg',
+    'x-gecko-21.jpg', 'x-gecko-22.jpg', 'x-gecko-23.jpg', 'x-gecko-24.jpg',
+    'x-gecko-25.jpg', 'x-gecko-26.jpg', 'x-gecko-27.jpg', 'x-gecko-28.jpg',
+    'x-gecko-29.jpg', 'x-gecko-30.jpg', 'x-gecko-31.jpg', 'x-gecko-32.jpg',
+    'x-gecko-33.jpg', 'x-gecko-34.jpg', 'x-gecko-35.jpg', 'x-gecko-36.jpg',
+    'x-gecko-37.jpg', 'x-gecko-38.jpg', 'x-gecko-39.jpg', 'x-gecko-40.jpg',
+    'x-gecko-41.jpg', 'x-gecko-42.jpg'
   ];
+
+  /* Keep the original post URL next to every local snapshot.  The archive
+     modal uses this map for its source link, so switching angles never loses
+     the provenance of a photograph. */
+  var xImagePostLinks = {
+    'x-gecko-01.jpg': 'https://x.com/MorphMarket/status/1669042399820013572',
+    'x-gecko-02.jpg': 'https://x.com/MorphMarket/status/1669842314582192130',
+    'x-gecko-03.jpg': 'https://x.com/MorphMarket/status/1671172080841424898',
+    'x-gecko-04.jpg': 'https://x.com/MorphMarket/status/1671986623423160329',
+    'x-gecko-05.jpg': 'https://x.com/MorphMarket/status/1670204680582955009',
+    'x-gecko-06.jpg': 'https://x.com/MorphMarket/status/1666102365441630208',
+    'x-gecko-07.jpg': 'https://x.com/MorphMarket/status/1942249693213323676',
+    'x-gecko-08.jpg': 'https://x.com/MorphMarket/status/1697625494928134179',
+    'x-gecko-09.jpg': 'https://x.com/MorphMarket/status/1698694537231683928',
+    'x-gecko-10.jpg': 'https://x.com/MorphMarket/status/1692906439788884072',
+    'x-gecko-11.jpg': 'https://x.com/MorphMarket/status/1681415418219757568',
+    'x-gecko-12.jpg': 'https://x.com/MorphMarket/status/1693695738759283115',
+    'x-gecko-13.jpg': 'https://x.com/MorphMarket/status/1689714775880589312',
+    'x-gecko-14.jpg': 'https://x.com/MorphMarket/status/1674795138638565376',
+    'x-gecko-15.jpg': 'https://x.com/MorphMarket/status/1684199572808122373',
+    'x-gecko-16.jpg': 'https://x.com/MorphMarket/status/1694764868186906982',
+    'x-gecko-17.jpg': 'https://x.com/MorphMarket/status/1692552730185781636',
+    'x-gecko-18.jpg': 'https://x.com/MorphMarket/status/1692174566372889073',
+    'x-gecko-19.jpg': 'https://x.com/MorphMarket/status/1685301480629190656',
+    'x-gecko-20.jpg': 'https://x.com/MorphMarket/status/1720239385642192898',
+    'x-gecko-21.jpg': 'https://x.com/MorphMarket/status/1663999102319820805',
+    'x-gecko-22.jpg': 'https://x.com/MorphMarket/status/1695107970143502353',
+    'x-gecko-23.jpg': 'https://x.com/MorphMarket/status/1664738753875783683',
+    'x-gecko-24.jpg': 'https://x.com/MorphMarket/status/1719493797283815840',
+    'x-gecko-25.jpg': 'https://x.com/MorphMarket/status/1699423262260838736',
+    'x-gecko-26.jpg': 'https://x.com/MorphMarket/status/1719069011760107868',
+    'x-gecko-27.jpg': 'https://x.com/MorphMarket/status/1700917067560444235',
+    'x-gecko-28.jpg': 'https://x.com/MorphMarket/status/1699920499227197468',
+    'x-gecko-29.jpg': 'https://x.com/MorphMarket/status/1966178530817175613',
+    'x-gecko-30.jpg': 'https://x.com/MorphMarket/status/2028877495546606045',
+    'x-gecko-31.jpg': 'https://x.com/MorphMarket/status/1866543701289271296',
+    'x-gecko-32.jpg': 'https://x.com/MorphMarket/status/1715869694312292833',
+    'x-gecko-33.jpg': 'https://x.com/MorphMarket/status/1929929533110563301',
+    'x-gecko-34.jpg': 'https://x.com/MorphMarket/status/2042691617186890056',
+    'x-gecko-35.jpg': 'https://x.com/MorphMarket/status/1986183898934727007',
+    'x-gecko-36.jpg': 'https://x.com/MorphMarket/status/1884717830832115876',
+    'x-gecko-37.jpg': 'https://x.com/MorphMarket/status/2016922225161441765',
+    'x-gecko-38.jpg': 'https://x.com/MorphMarket/status/2001330277457752342',
+    'x-gecko-39.jpg': 'https://x.com/MorphMarket/status/1976746117066002559',
+    'x-gecko-40.jpg': 'https://x.com/MorphMarket/status/1889349786647592968',
+    'x-gecko-41.jpg': 'https://x.com/MorphMarket/status/1979212721326354525',
+    'x-gecko-42.jpg': 'https://x.com/MorphMarket/status/1881419345521500506'
+  };
 
   var geneProfiles = {
     CHW: {
@@ -252,7 +312,37 @@
     ['雪幕 Lily', 'Lily White', 3360, '大面积覆色与肩部留白', '公', '2024', '海岛育种局'],
     ['霁灰 Ax', 'Axanthic', 4620, '灰阶纯度与红色素抑制', '母', '2024', '灰阶研究所'],
     ['琥珀侧线', 'Harlequin', 1760, '琥珀底色与侧线节奏', '公', '2023', '林下实验室'],
-    ['玄岩 Sable', 'Sable', 2940, '玄色基底与背脊纵深', '母', '2024', '雾岛基因社']
+    ['玄岩 Sable', 'Sable', 2940, '玄色基底与背脊纵深', '母', '2024', '雾岛基因社'],
+    ['暮色 Sable', 'Sable', 820, '暮色底与背线收束', '公', '2024', '雨林档案室'],
+    ['霜乳 Lily', 'Lily White', 1820, '霜白覆色与颈侧边界', '母', '2023', '海岛育种局'],
+    ['灰羽 Ax', 'Axanthic', 2640, '灰羽底色与火焰线层次', '公', '2024', '灰阶研究所'],
+    ['赤褐火焰', 'Harlequin', 980, '赤褐底色与背线连贯性', '母', '2024', '林下实验室'],
+    ['深海 Sable', 'Sable', 1460, '深棕底与侧纹密度', '公', '2023', '南岛爬舍'],
+    ['晨星 Lily', 'Lily White', 2080, '晨白覆色与肩线留白', '母', '2024', '潮汐基因库'],
+    ['银雾 Axanthic', 'Axanthic', 3020, '银灰过渡与尾基完整度', '公', '2023', '雾岛基因社'],
+    ['枫糖火线', 'Harlequin', 1360, '暖棕底与火线节奏', '母', '2024', '山海爬舍'],
+    ['墨玉 Sable', 'Sable', 1720, '墨棕基底与鳞片反光', '公', '2023', '雨林档案室'],
+    ['云端 Lily', 'Lily White', 2440, '云白覆色与背线比例', '母', '2024', '海岛育种局'],
+    ['极夜 Axanthic', 'Axanthic', 3640, '冷灰底与暗纹对比', '公', '2023', '灰阶研究所'],
+    ['珊瑚火焰', 'Harlequin', 1180, '珊瑚红底与侧身纹理', '母', '2024', '林下实验室'],
+    ['苔原 Sable', 'Sable', 2260, '苔灰棕底与背部纵深', '公', '2024', '南岛爬舍'],
+    ['白瓷 Lily', 'Lily White', 2740, '瓷白覆色与边界纯度', '母', '2023', '潮汐基因库'],
+    ['铅灰 Axanthic', 'Axanthic', 3860, '铅灰基调与红色素收束', '公', '2024', '雾岛基因社'],
+    ['落日火焰', 'Harlequin', 1620, '落日橙底与火焰线连续性', '母', '2023', '山海爬舍'],
+    ['黑潮 Sable', 'Sable', 2480, '黑棕底与侧身回弹', '公', '2024', '雨林档案室'],
+    ['雪线 Lily', 'Lily White', 2980, '雪白覆色与肩部留白', '母', '2024', '海岛育种局'],
+    ['霜蓝 Axanthic', 'Axanthic', 4140, '霜蓝灰阶与火焰边缘', '公', '2023', '灰阶研究所'],
+    ['橙脊火线', 'Harlequin', 1880, '橙色脊线与侧纹开幅', '母', '2024', '林下实验室'],
+    ['岩墨 Sable', 'Sable', 2860, '岩墨底色与背脊层次', '公', '2023', '雾岛基因社'],
+    ['云絮 Lily', 'Lily White', 3240, '云絮覆色与头冠完整度', '母', '2024', '潮汐基因库'],
+    ['月蚀 Axanthic', 'Axanthic', 4480, '月蚀冷灰与纹理对比', '公', '2023', '灰阶研究所'],
+    ['红茶火焰', 'Harlequin', 2020, '红茶底与火焰线秩序', '母', '2024', '山海爬舍'],
+    ['玄青 Sable', 'Sable', 3120, '玄青底色与尾基状态', '公', '2023', '雨林档案室'],
+    ['雪松 Lily', 'Lily White', 3520, '雪松白覆色与背部留白', '母', '2024', '海岛育种局'],
+    ['星灰 Axanthic', 'Axanthic', 4860, '星灰颗粒感与冷调稳定性', '公', '2023', '雾岛基因社'],
+    ['琥珀火线', 'Harlequin', 2180, '琥珀底色与火线连贯性', '母', '2024', '林下实验室'],
+    ['暮岩 Sable', 'Sable', 3180, '暮岩深棕与背脊纵深', '公', '2023', '南岛爬舍'],
+    ['霁白 Lily', 'Lily White', 3780, '霁白覆色与侧身边界', '母', '2024', '潮汐基因库']
   ];
 
   /* Seeded handles also populate the historical rows generated on first
@@ -272,15 +362,21 @@
     return { start: -((index - 14) * 86400 + 7200), end: -((index - 19) * 5300 + 1100) };
   }
 
-  function makeInitialBids(price, increment, index) {
+  function makeInitialBids(price, increment, index, endsAt) {
     var count = 5 + (index % 5);
     var rows = [];
     for (var i = count - 1; i >= 0; i -= 1) {
       var amount = Math.max(increment, price - i * increment);
+      var nominalAt = nowAtLoad - ((count - i) * 7 + index) * 60000;
+      /* Historical lots can sit several days behind the live board.  Cap
+         their seeded bids just before the scheduled close so the archive
+         never suggests a bid arrived after the hammer fell.  Future/live
+         lots keep the original rolling timestamps. */
+      var beforeClose = Number(endsAt) > 0 ? Number(endsAt) - (count - i) * 60000 : nominalAt;
       rows.push({
         bidder: bidderNames[(index + i) % bidderNames.length],
         amount: amount,
-        at: nowAtLoad - ((count - i) * 7 + index) * 60000,
+        at: Math.min(nominalAt, beforeClose),
         proxy: i % 3 === 0
       });
     }
@@ -298,7 +394,7 @@
          launch image or inheriting its source label. */
       var image = index === 0 ? 'chw.jpeg' : imagePool[(index - 1) % imagePool.length];
       var gallery = index === 0
-        ? ['chw.jpeg', 'commons-face.jpg', 'commons-back.jpg']
+        ? ['chw.jpeg', 'x-gecko-01.jpg', 'x-gecko-02.jpg']
         : [image, imagePool[(index + 6) % imagePool.length], imagePool[(index + 14) % imagePool.length]];
       return {
         id: 'GX-' + String(101 + index),
@@ -319,7 +415,7 @@
         endsAt: nowAtLoad + schedule.end * 1000,
         description: profile.description + ' 本场档案聚焦“' + seed[3] + '”，以正面、背部和侧身三个视角记录外观表现，便于竞买人在出价前建立完整判断。',
         tags: profile.tags.concat(index % 2 ? ['单只档案'] : ['繁育记录']),
-        bids: makeInitialBids(seed[2], increment, index),
+        bids: makeInitialBids(seed[2], increment, index, nowAtLoad + schedule.end * 1000),
         marketLow: snapshot.low,
         marketHigh: snapshot.high,
         marketEstimate: snapshot.estimate,
@@ -339,7 +435,7 @@
 
   var lots = createLots();
   var appState = {
-    balance: 2000,
+    balance: INITIAL_BALANCE,
     frozen: 0,
     deposits: {},
     depositStatuses: {},
@@ -363,10 +459,38 @@
     try {
       var saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null');
       if (!saved || saved.version !== 7) return;
-      appState.balance = Number(saved.balance) >= 0 ? Number(saved.balance) : 2000;
+      var savedBalance = Number(saved.balance);
+      var savedDeposits = saved.deposits && typeof saved.deposits === 'object' ? saved.deposits : {};
+      var savedDepositStatuses = saved.depositStatuses && typeof saved.depositStatuses === 'object' ? saved.depositStatuses : {};
+      var savedActivity = Array.isArray(saved.activity) ? saved.activity : [];
+      var savedOrders = Array.isArray(saved.orders) ? saved.orders : [];
+      var savedFavorites = Array.isArray(saved.favorites) ? saved.favorites : [];
+      var savedSettled = saved.settled && typeof saved.settled === 'object' ? saved.settled : {};
+      var hasMeaningfulSettlement = Object.keys(savedSettled).some(function (lotId) {
+        var settlement = savedSettled[lotId];
+        return settlement && settlement.status && settlement.status !== 'none';
+      });
+      /* v7 was shipped with a ¥2,000 placeholder wallet.  Migrate that
+         untouched placeholder to the new zero-credit starting state, while
+         preserving any returning bidder who has already interacted with the
+         page (deposits, orders, favourites, activity or settlements). */
+      var legacyPlaceholder = savedBalance === LEGACY_INITIAL_BALANCE
+        && Object.keys(savedDeposits).length === 0
+        && Object.keys(savedDepositStatuses).length === 0
+        && savedActivity.length === 0
+        && savedOrders.length === 0
+        && savedFavorites.length === 0
+        /* settleEndedLots() records status=none for every historical lot even
+           before a bidder interacts; those bookkeeping rows are not evidence
+           of a used wallet and must not block the migration. */
+        && !hasMeaningfulSettlement
+        && Number(saved.frozen || 0) === 0;
+      appState.balance = savedBalance >= 0 && !isNaN(savedBalance)
+        ? (legacyPlaceholder ? INITIAL_BALANCE : savedBalance)
+        : INITIAL_BALANCE;
       appState.frozen = Number(saved.frozen) >= 0 ? Number(saved.frozen) : 0;
-      appState.deposits = saved.deposits && typeof saved.deposits === 'object' ? saved.deposits : {};
-      appState.depositStatuses = saved.depositStatuses && typeof saved.depositStatuses === 'object' ? saved.depositStatuses : {};
+      appState.deposits = savedDeposits;
+      appState.depositStatuses = savedDepositStatuses;
       /* Deposit policy is uniform across the market. Older saved sessions are
          normalized so a previous freeze can never leak into the new CHW drop.
          A missing status means the old flow treated the deposit as frozen, so
@@ -379,9 +503,9 @@
         appState.deposits[lotId] = 50;
       });
       appState.balance = Math.max(0, appState.balance);
-      appState.favorites = Array.isArray(saved.favorites) ? saved.favorites : [];
-      if (Array.isArray(saved.activity)) {
-        appState.activity = saved.activity.slice(0, 50).map(function (entry, entryIndex) {
+      appState.favorites = savedFavorites;
+      if (savedActivity.length) {
+        appState.activity = savedActivity.slice(0, 50).map(function (entry, entryIndex) {
           var normalized = Object.assign({}, entry);
           var activityLot = getLot(normalized.lotId);
           normalized.bidder = displayBidderName(normalized.bidder, activityLot, normalized.at || entryIndex);
@@ -395,12 +519,12 @@
           return normalized;
         });
       }
-      appState.orders = Array.isArray(saved.orders) ? saved.orders.map(function (order) {
+      appState.orders = savedOrders.map(function (order) {
         var normalized = Object.assign({}, order);
         normalized.deposit = 50;
         return normalized;
-      }) : [];
-      appState.settled = saved.settled && typeof saved.settled === 'object' ? saved.settled : {};
+      });
+      appState.settled = savedSettled;
       appState.frozen = Object.keys(appState.deposits).reduce(function (total, lotId) {
         return total + (appState.depositStatuses[lotId] === 'frozen' ? 50 : 0);
       }, 0);
@@ -436,6 +560,10 @@
           if (Number(savedLot.endsAt) > 0) lot.endsAt = Number(savedLot.endsAt);
         });
       }
+      /* Persist the migration immediately so the legacy placeholder is not
+         reconsidered on every refresh.  No account data is discarded: only
+         the untouched demo credit is rewritten as the new ¥0 baseline. */
+      if (legacyPlaceholder) writeState();
     } catch (error) {
       /* Private browsing and file:// pages can disable localStorage. */
     }
@@ -532,15 +660,17 @@
    * The mirror list is deliberately bounded: a broken image can never create
    * an endless network loop.
    */
-  /* Pin mirrors to the published source revision for deterministic cache
-     behavior; the revision contains both the CHW launch image and archive. */
+  /* Keep fallbacks on the current public branch so newly added local assets
+     are recoverable even before a later deploy updates the HTML asset base.
+     The first request still uses the configured revision (or the local file);
+     these bounded mirrors only run after that request fails. */
   var imageMirrorBases = [
-    'https://cdn.jsdelivr.net/gh/leixianya/gecko-auction@f6d64b66e02629d14d79af84958b4ae879467545/assets/',
-    'https://testingcf.jsdelivr.net/gh/leixianya/gecko-auction@f6d64b66e02629d14d79af84958b4ae879467545/assets/',
-    'https://fastly.jsdelivr.net/gh/leixianya/gecko-auction@f6d64b66e02629d14d79af84958b4ae879467545/assets/',
-    'https://gcore.jsdelivr.net/gh/leixianya/gecko-auction@f6d64b66e02629d14d79af84958b4ae879467545/assets/',
-    'https://quantil.jsdelivr.net/gh/leixianya/gecko-auction@f6d64b66e02629d14d79af84958b4ae879467545/assets/',
-    'https://raw.githubusercontent.com/leixianya/gecko-auction/f6d64b66e02629d14d79af84958b4ae879467545/assets/'
+    'https://cdn.jsdelivr.net/gh/leixianya/gecko-auction@main/assets/',
+    'https://testingcf.jsdelivr.net/gh/leixianya/gecko-auction@main/assets/',
+    'https://fastly.jsdelivr.net/gh/leixianya/gecko-auction@main/assets/',
+    'https://gcore.jsdelivr.net/gh/leixianya/gecko-auction@main/assets/',
+    'https://quantil.jsdelivr.net/gh/leixianya/gecko-auction@main/assets/',
+    'https://raw.githubusercontent.com/leixianya/gecko-auction/main/assets/'
   ];
   var imageCandidates = typeof WeakMap === 'function' ? new WeakMap() : null;
   var imageRequestSerial = 0;
@@ -583,7 +713,7 @@
     var original = String(src || '');
     var file = imageFileName(original);
     var values = [original];
-    if (file && /^(?:commons-[\w.-]+|chw[\w.-]*)$/i.test(file)) {
+    if (file && /^(?:commons-[\w.-]+|chw[\w.-]*|x-gecko-[\w.-]+)$/i.test(file)) {
       imageMirrorBases.forEach(function (base) { values.push(base + encodeURIComponent(file)); });
     }
     return values.filter(function (value, index, all) { return value && all.indexOf(value) === index; });
@@ -907,6 +1037,16 @@
     renderWalletOrders();
   }
 
+  function addBalance(amount) {
+    var value = Number(amount);
+    if (!isFinite(value) || value <= 0) return;
+    value = Math.round(value);
+    appState.balance = Math.max(0, Number(appState.balance) || 0) + value;
+    writeState();
+    updateWallet();
+    showToast('账户额度已增加 ' + money(value) + '。');
+  }
+
   function topBidFor(lot) {
     if (!lot || !lot.bids || !lot.bids.length) return null;
     return lot.bids.slice().sort(function (a, b) {
@@ -1048,13 +1188,32 @@
 
   function renderModalSource(lot, file) {
     if (!lot) return;
-    var currentFile = imageFileName(file || lot.image);
+    var rawFile = String(file || lot.image || '');
+    var currentFile = imageFileName(rawFile);
     var isChw = currentFile.toLowerCase() === 'chw.jpeg';
     var isPrimary = currentFile === imageFileName(lot.image);
-    if ($('modal-image-label')) $('modal-image-label').textContent = isChw ? 'CHW / PURPLE LINE' : 'ARCHIVE ANGLE / COMMONS';
-    if ($('modal-source')) $('modal-source').innerHTML = isChw
-      ? '拍品主图：紫曜系资料图 · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看素材说明 ↗</a>'
-      : (isPrimary ? '拍品图片档案：Wikimedia Commons · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看作者与许可信息 ↗</a>' : '角度资料图：Wikimedia Commons · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看作者与许可信息 ↗</a>');
+    /* The catalogue can use X image URLs as well as the legacy local Commons
+       files.  Detect the host before composing the caption so an X image is
+       never described as Wikimedia material.  Keep the direct image URL as
+       the link; a later catalogue entry may optionally replace it with its
+       original post URL without changing this renderer. */
+    var isXImage = /^x-gecko[-_]/i.test(currentFile)
+      || /(?:pbs\.twimg\.com|twimg\.com|(?:^|\/\/)(?:www\.)?(?:x|twitter)\.com)/i.test(rawFile);
+    var isRemote = /^(?:https?:)?\/\//i.test(rawFile);
+    var postHref = xImagePostLinks[currentFile] || '';
+    var sourceHref = isRemote ? rawFile : (postHref || assetUrl('ATTRIBUTIONS.md'));
+    if (isXImage && postHref) sourceHref = postHref;
+    if ($('modal-image-label')) $('modal-image-label').textContent = isChw ? 'CHW / PURPLE LINE' : (isXImage ? 'ARCHIVE ANGLE / X' : 'ARCHIVE ANGLE / COMMONS');
+    if ($('modal-source')) {
+      if (isChw) {
+        $('modal-source').innerHTML = '拍品主图：紫曜系资料图 · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看素材说明 ↗</a>';
+      } else if (isXImage) {
+        var xLinkLabel = postHref ? '查看原帖 ↗' : (isRemote ? '查看原图 ↗' : '查看署名信息 ↗');
+        $('modal-source').innerHTML = (isPrimary ? '拍品图片档案：X 公开图片' : '角度资料图：X 公开图片') + ' · <a href="' + esc(sourceHref) + '" target="_blank" rel="noreferrer">' + xLinkLabel + '</a>';
+      } else {
+        $('modal-source').innerHTML = (isPrimary ? '拍品图片档案：Wikimedia Commons' : '角度资料图：Wikimedia Commons') + ' · <a href="' + esc(sourceHref) + '" target="_blank" rel="noreferrer">查看作者与许可信息 ↗</a>';
+      }
+    }
   }
 
   /*
@@ -1520,6 +1679,9 @@
     $('guide-rules') && $('guide-rules').addEventListener('click', function () { openModal('rules-modal'); });
     $('wallet-button') && $('wallet-button').addEventListener('click', function () { updateWallet(); openModal('wallet-modal'); });
     $('profile-button') && $('profile-button').addEventListener('click', function () { updateWallet(); openModal('wallet-modal'); });
+    queryAll('[data-add-balance]').forEach(function (button) {
+      button.addEventListener('click', function () { addBalance(button.dataset.addBalance); });
+    });
     queryAll('.modal-backdrop').forEach(function (backdrop) {
       backdrop.addEventListener('click', function (event) { if (event.target === backdrop) closeModal(backdrop); });
     });

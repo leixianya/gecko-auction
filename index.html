@@ -23,7 +23,7 @@
         </div>
         <div class="top-actions">
           <nav class="top-nav" aria-label="主导航"><a href="#lots">发现拍品</a><a href="#activity">实时竞价</a><button class="top-link" type="button" id="open-rules">竞拍规则</button></nav>
-          <button class="wallet-button" type="button" id="wallet-button"><span>钱包</span><strong id="wallet-amount">¥ 2,000</strong></button>
+          <button class="wallet-button" type="button" id="wallet-button"><span>钱包</span><strong id="wallet-amount">¥ 0</strong></button>
           <button class="avatar-button" type="button" id="profile-button" aria-label="打开个人中心">LS</button>
         </div>
         <button class="mobile-menu" id="mobile-menu" type="button" aria-expanded="false" aria-controls="mobile-panel" aria-label="打开菜单"><i></i><i></i></button>
@@ -31,7 +31,7 @@
 
       <div class="mobile-panel" id="mobile-panel" aria-hidden="true">
         <button type="button" data-mobile-action="rules">竞拍规则 <span>↗</span></button>
-        <button type="button" data-mobile-action="wallet">我的钱包 <span id="mobile-wallet-amount">¥ 2,000</span></button>
+        <button type="button" data-mobile-action="wallet">我的钱包 <span id="mobile-wallet-amount">¥ 0</span></button>
         <a href="#lots">浏览全部拍品 <span>↓</span></a>
       </div>
 
@@ -39,19 +39,19 @@
         <aside class="sidebar" aria-label="拍品筛选">
           <div class="side-section">
             <p class="side-label">MARKET VIEW</p>
-            <button class="side-filter is-active" type="button" data-view="all"><span>全部拍品</span><b id="count-all">30</b></button>
+            <button class="side-filter is-active" type="button" data-view="all"><span>全部拍品</span><b id="count-all">60</b></button>
             <button class="side-filter" type="button" data-view="live"><span>正在竞拍</span><b id="count-live">12</b></button>
             <button class="side-filter" type="button" data-view="soon"><span>即将开始</span><b id="count-soon">8</b></button>
-            <button class="side-filter" type="button" data-view="ended"><span>已结束</span><b id="count-ended">10</b></button>
+            <button class="side-filter" type="button" data-view="ended"><span>已结束</span><b id="count-ended">40</b></button>
           </div>
           <div class="side-section">
             <p class="side-label">COLLECTION</p>
-            <button class="morph-filter is-active" type="button" data-morph="all"><i class="dot dot-all"></i>睫角守宫 <span>30</span></button>
+            <button class="morph-filter is-active" type="button" data-morph="all"><i class="dot dot-all"></i>睫角守宫 <span>60</span></button>
             <button class="morph-filter chw-filter" type="button" data-morph="CHW"><i class="dot dot-chw"></i>CHW 紫曜系 <span>1</span></button>
-            <button class="morph-filter" type="button" data-morph="Sable"><i class="dot dot-sable"></i>Sable 系 <span>8</span></button>
-            <button class="morph-filter" type="button" data-morph="Lily White"><i class="dot dot-lily"></i>Lily White 系 <span>7</span></button>
-            <button class="morph-filter" type="button" data-morph="Axanthic"><i class="dot dot-ax"></i>Axanthic 系 <span>7</span></button>
-            <button class="morph-filter" type="button" data-morph="Harlequin"><i class="dot dot-harlequin"></i>Harlequin 系 <span>8</span></button>
+            <button class="morph-filter" type="button" data-morph="Sable"><i class="dot dot-sable"></i>Sable 系 <span>16</span></button>
+            <button class="morph-filter" type="button" data-morph="Lily White"><i class="dot dot-lily"></i>Lily White 系 <span>15</span></button>
+            <button class="morph-filter" type="button" data-morph="Axanthic"><i class="dot dot-ax"></i>Axanthic 系 <span>14</span></button>
+            <button class="morph-filter" type="button" data-morph="Harlequin"><i class="dot dot-harlequin"></i>Harlequin 系 <span>14</span></button>
           </div>
           <div class="side-note">
             <div class="side-note-icon">✦</div>
@@ -118,10 +118,10 @@
 
           <section class="lots-section" id="lots" aria-labelledby="lots-title">
             <div class="lots-heading">
-              <div><p class="section-eyebrow">02 / MARKET BOARD</p><h2 id="lots-title">正在发生 <span id="result-count">30 件拍品</span></h2></div>
+              <div><p class="section-eyebrow">02 / MARKET BOARD</p><h2 id="lots-title">正在发生 <span id="result-count">60 件拍品</span></h2></div>
               <div class="board-actions"><label class="sort-control"><span>排序</span><select id="sort-select"><option value="ending">即将结束</option><option value="newest">最新上架</option><option value="price-low">价格从低到高</option><option value="price-high">价格从高到低</option></select></label><button class="refresh-button" type="button" id="refresh-button" aria-label="刷新拍品">↻</button></div>
             </div>
-            <div class="status-tabs" id="status-tabs" role="tablist" aria-label="拍品状态"><button class="is-active" type="button" data-status="all" role="tab" aria-selected="true">全部 <span>30</span></button><button type="button" data-status="live" role="tab" aria-selected="false">正在竞拍 <span>12</span></button><button type="button" data-status="soon" role="tab" aria-selected="false">即将开始 <span>8</span></button><button type="button" data-status="ended" role="tab" aria-selected="false">已结束 <span>10</span></button></div>
+            <div class="status-tabs" id="status-tabs" role="tablist" aria-label="拍品状态"><button class="is-active" type="button" data-status="all" role="tab" aria-selected="true">全部 <span>60</span></button><button type="button" data-status="live" role="tab" aria-selected="false">正在竞拍 <span>12</span></button><button type="button" data-status="soon" role="tab" aria-selected="false">即将开始 <span>8</span></button><button type="button" data-status="ended" role="tab" aria-selected="false">已结束 <span>40</span></button></div>
             <div class="lot-grid" id="lot-grid"></div>
             <button class="load-more" type="button" id="load-more">载入更多拍品 <span>↓</span></button>
           </section>
@@ -175,7 +175,7 @@
         <div class="deposit-progress"><span class="is-active">01</span><i></i><span>02</span><i></i><span>03</span></div>
         <p class="section-eyebrow">BIDDER VERIFICATION</p><h2 id="deposit-title">先确认你的<br /><em>竞拍资格。</em></h2>
         <p class="deposit-lede">参与竞拍前需要冻结 ¥ 50 保证金。中拍后转入订单首付款，未中拍则按规则释放。</p>
-        <div class="deposit-summary"><div><span>本场保证金</span><strong id="deposit-amount">¥ 50</strong></div><div><span>可用余额</span><strong id="deposit-balance">¥ 2,000</strong></div></div>
+        <div class="deposit-summary"><div><span>本场保证金</span><strong id="deposit-amount">¥ 50</strong></div><div><span>可用余额</span><strong id="deposit-balance">¥ 0</strong></div></div>
         <label class="consent-check"><input type="checkbox" id="deposit-consent" /><span>我已阅读拍品图片、文字、参数、瑕疵与运送条件，并了解出价后不可撤回。</span></label>
         <button class="primary-button full-button" type="button" id="confirm-deposit">确认冻结保证金 <span>↗</span></button>
         <p class="dialog-footnote">余额、保证金与订单节点在本页实时计算；页面不连接支付、银行卡或身份信息。</p>
@@ -194,7 +194,7 @@
     <div class="modal-backdrop" id="wallet-modal" aria-hidden="true">
       <div class="wallet-dialog" role="dialog" aria-modal="true" aria-labelledby="wallet-title">
         <button class="modal-close" type="button" data-close-modal aria-label="关闭">×</button>
-        <p class="section-eyebrow">MY WALLET</p><h2 id="wallet-title">我的钱包</h2><div class="wallet-card"><span>可用余额</span><strong id="wallet-modal-amount">¥ 2,000</strong><small>冻结中 <b id="wallet-frozen">¥ 0</b></small></div><div class="wallet-lines"><div><span>待释放保证金</span><b>¥ 0</b></div><div><span>待结算订单</span><b>0 笔</b></div></div><button class="outline-button full-button" type="button" data-close-modal>返回市场</button><p class="dialog-footnote">钱包状态在本页实时计算，不接入支付、银行卡或身份信息。</p></div>
+        <p class="section-eyebrow">MY WALLET</p><h2 id="wallet-title">我的钱包</h2><div class="wallet-card"><span>可用余额</span><strong id="wallet-modal-amount">¥ 0</strong><small>冻结中 <b id="wallet-frozen">¥ 0</b></small></div><div class="wallet-topup" aria-label="补充账户额度"><div class="wallet-topup-head"><span>补充账户额度</span><small>当前页面即时到账</small></div><div class="wallet-topup-actions"><button type="button" data-add-balance="50">＋¥ 50</button><button type="button" data-add-balance="500">＋¥ 500</button><button type="button" data-add-balance="1000">＋¥ 1,000</button></div></div><div class="wallet-lines"><div><span>待释放保证金</span><b>¥ 0</b></div><div><span>待结算订单</span><b>0 笔</b></div></div><button class="outline-button full-button" type="button" data-close-modal>返回市场</button><p class="dialog-footnote">钱包状态在本页实时计算，不接入支付、银行卡或身份信息。</p></div>
     </div>
 
     <div class="auction-dock" id="auction-dock" aria-label="当前竞拍快捷栏">
