@@ -15,7 +15,7 @@
   var assetBase = configuredAssetBase && configuredAssetBase.charAt(configuredAssetBase.length - 1) !== '/' ? configuredAssetBase + '/' : configuredAssetBase;
 
   var $ = function (id) { return document.getElementById(id); };
-  var $$ = function (selector, root) { return Array.prototype.slice.call((root || document).querySelectorAll(selector)); };
+  var queryAll = function (selector, root) { return Array.prototype.slice.call((root || document).querySelectorAll(selector)); };
   var clamp = function (value, min, max) { return Math.min(Math.max(value, min), max); };
   var money = function (value) { return '¥ ' + moneyFormatter.format(Math.max(0, Math.round(Number(value) || 0))); };
   var esc = function (value) {
@@ -571,12 +571,12 @@
       var node = $('count-' + key);
       if (node) node.textContent = mapping[key];
     });
-    $$('#status-tabs button').forEach(function (button) {
+    queryAll('#status-tabs button').forEach(function (button) {
       var value = button.dataset.status;
       var span = button.querySelector('span');
       if (span) span.textContent = mapping[value] == null ? 0 : mapping[value];
     });
-    $$('.morph-filter').forEach(function (button) {
+    queryAll('.morph-filter').forEach(function (button) {
       var morph = button.dataset.morph;
       var span = button.querySelector('span');
       if (!span) return;
@@ -638,7 +638,7 @@
     var result = filteredLots();
     var visible = result.slice(0, visibleCount);
     grid.innerHTML = visible.length ? visible.map(cardMarkup).join('') : '<div class="empty-state">没有找到匹配的拍品。换一个关键词，或清除筛选后再看。</div>';
-    $$('#lot-grid img').forEach(wireImage);
+    queryAll('#lot-grid img').forEach(wireImage);
     var count = $('result-count');
     if (count) count.textContent = result.length + ' 件拍品';
     var loadMore = $('load-more');
@@ -760,7 +760,7 @@
       return total + (appState.depositStatuses[lotId] === 'frozen' ? Number(appState.deposits[lotId]) || 0 : 0);
     }, 0);
     var orderCount = appState.orders.filter(function (order) { return order.status === '待付款'; }).length;
-    var walletLines = $$('.wallet-lines b');
+    var walletLines = queryAll('.wallet-lines b');
     if (walletLines[0]) walletLines[0].textContent = money(pendingRelease);
     if (walletLines[1]) walletLines[1].textContent = orderCount + ' 笔';
     renderWalletOrders();
@@ -849,11 +849,11 @@
     if (!modal) return;
     modal.classList.remove('is-open');
     modal.setAttribute('aria-hidden', 'true');
-    if (!$$('.modal-backdrop.is-open').length) document.body.classList.remove('modal-open');
+    if (!queryAll('.modal-backdrop.is-open').length) document.body.classList.remove('modal-open');
   }
 
   function closeAllModals() {
-    $$('.modal-backdrop.is-open').forEach(closeModal);
+    queryAll('.modal-backdrop.is-open').forEach(closeModal);
   }
 
   function updateModalBidControls(lot) {
@@ -1057,7 +1057,7 @@
       thumbs.innerHTML = lot.gallery.map(function (file, index) {
         return '<button class="modal-thumb' + (index === 0 ? ' is-active' : '') + '" type="button" data-thumb="' + esc(assetUrl(file)) + '" data-alt="' + esc(lot.title + ' 角度 ' + (index + 1)) + '"><img src="' + esc(assetUrl(file)) + '" alt="' + esc(lot.title + ' 角度 ' + (index + 1)) + '" loading="lazy" /></button>';
       }).join('');
-      $$('.modal-thumb img', thumbs).forEach(wireImage);
+      queryAll('.modal-thumb img', thumbs).forEach(wireImage);
     }
     updateModalBidControls(lot);
     renderModalAiIndicators(lot);
@@ -1244,9 +1244,9 @@
   }
 
   function syncFilterButtons() {
-    $$('.side-filter').forEach(function (button) { button.classList.toggle('is-active', button.dataset.view === activeView); });
-    $$('.morph-filter').forEach(function (button) { button.classList.toggle('is-active', button.dataset.morph === activeMorph); });
-    $$('#status-tabs button').forEach(function (button) {
+    queryAll('.side-filter').forEach(function (button) { button.classList.toggle('is-active', button.dataset.view === activeView); });
+    queryAll('.morph-filter').forEach(function (button) { button.classList.toggle('is-active', button.dataset.morph === activeMorph); });
+    queryAll('#status-tabs button').forEach(function (button) {
       var active = button.dataset.status === activeView;
       button.classList.toggle('is-active', active);
       button.setAttribute('aria-selected', String(active));
@@ -1298,9 +1298,9 @@
     if (search) search.addEventListener('input', function () { searchQuery = search.value; visibleCount = 16; renderLots(); });
     var sort = $('sort-select');
     if (sort) sort.addEventListener('change', function () { sortMode = sort.value; visibleCount = 16; renderLots(); });
-    $$('.side-filter').forEach(function (button) { button.addEventListener('click', function () { activeView = button.dataset.view; syncFilterButtons(); visibleCount = 16; renderLots(); }); });
-    $$('.morph-filter').forEach(function (button) { button.addEventListener('click', function () { activeMorph = button.dataset.morph; syncFilterButtons(); visibleCount = 16; renderLots(); }); });
-    $$('#status-tabs button').forEach(function (button) { button.addEventListener('click', function () { activeView = button.dataset.status; syncFilterButtons(); visibleCount = 16; renderLots(); }); });
+    queryAll('.side-filter').forEach(function (button) { button.addEventListener('click', function () { activeView = button.dataset.view; syncFilterButtons(); visibleCount = 16; renderLots(); }); });
+    queryAll('.morph-filter').forEach(function (button) { button.addEventListener('click', function () { activeMorph = button.dataset.morph; syncFilterButtons(); visibleCount = 16; renderLots(); }); });
+    queryAll('#status-tabs button').forEach(function (button) { button.addEventListener('click', function () { activeView = button.dataset.status; syncFilterButtons(); visibleCount = 16; renderLots(); }); });
     var loadMore = $('load-more');
     if (loadMore) loadMore.addEventListener('click', function () { visibleCount += 16; renderLots(); });
     var refresh = $('refresh-button');
@@ -1356,10 +1356,10 @@
     $('guide-rules') && $('guide-rules').addEventListener('click', function () { openModal('rules-modal'); });
     $('wallet-button') && $('wallet-button').addEventListener('click', function () { updateWallet(); openModal('wallet-modal'); });
     $('profile-button') && $('profile-button').addEventListener('click', function () { updateWallet(); openModal('wallet-modal'); });
-    $$('.modal-backdrop').forEach(function (backdrop) {
+    queryAll('.modal-backdrop').forEach(function (backdrop) {
       backdrop.addEventListener('click', function (event) { if (event.target === backdrop) closeModal(backdrop); });
     });
-    $$( '[data-close-modal]' ).forEach(function (button) { button.addEventListener('click', function () { closeModal(button.closest('.modal-backdrop')); }); });
+    queryAll('[data-close-modal]').forEach(function (button) { button.addEventListener('click', function () { closeModal(button.closest('.modal-backdrop')); }); });
     var menu = $('mobile-menu');
     var mobilePanel = $('mobile-panel');
     function toggleMobileMenu() {
@@ -1386,7 +1386,7 @@
       if (thumb) {
         var modalImage = $('modal-image');
         setImage(modalImage, thumb.dataset.thumb, thumb.dataset.alt, thumb.dataset.alt);
-        $$('.modal-thumb').forEach(function (item) { item.classList.toggle('is-active', item === thumb); });
+        queryAll('.modal-thumb').forEach(function (item) { item.classList.toggle('is-active', item === thumb); });
         renderModalSource(getLot(activeLotId), thumb.dataset.thumb);
       }
     });
@@ -1398,7 +1398,7 @@
 
   function updateCountdowns() {
     settleEndedLots();
-    $$('[data-countdown]').forEach(function (node) {
+    queryAll('[data-countdown]').forEach(function (node) {
       var lot = getLot(node.dataset.countdown);
       if (lot) node.textContent = remainingText(lot, true);
     });
