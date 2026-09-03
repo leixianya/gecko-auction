@@ -3,10 +3,10 @@
 
   /*
    * The page is intentionally self-contained.  Prices, deposits and bids are
-   * held in the browser only so the whole auction flow can be explored without
+   * held in the browser only so the whole auction flow can be experienced without
    * a payment service or an account backend.
    */
-  var STORAGE_KEY = 'gecko-auction-state-v5';
+  var STORAGE_KEY = 'gecko-auction-state-v7';
   var moneyFormatter = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 0 });
   var nowAtLoad = Date.now();
   var toastTimer;
@@ -44,6 +44,12 @@
   ];
 
   var geneProfiles = {
+    CHW: {
+      label: 'CHW 紫曜系',
+      subtitle: 'CHW Purple · 薰衣草紫底、深紫侧纹与奶白冠线',
+      description: 'CHW 紫曜系以低饱和薰衣草紫为视觉基底，沿背部延展深紫色纹理，冠线与侧身留有奶白层次。观察重点是紫色在不同状态下的稳定度、背线连续性、冠缘整洁度与体态比例。',
+      tags: ['紫系首发', '深紫侧纹', '奶白冠线']
+    },
     Sable: {
       label: 'Sable',
       subtitle: 'Sable · 深色素沉淀与低饱和烟棕',
@@ -76,8 +82,107 @@
     }
   };
 
+  /*
+   * Price bands are deliberately broad, page-local reference bands rather
+   * than promises about an animal's value.  They keep the generated lots in
+   * believable relative positions: Lily White / Axanthic combinations sit
+   * above entry-level Harlequin and Sable examples, while quality and archive
+   * notes move an individual within its band.
+   */
+  var marketBands = {
+    CHW: { low: 1980, high: 8800, center: 4800, pressure: 0.78 },
+    Sable: { low: 800, high: 3200, center: 1650, pressure: 0.58 },
+    'Sable Lily White': { low: 1800, high: 6200, center: 3500, pressure: 0.66 },
+    'Lily White': { low: 1400, high: 5800, center: 3000, pressure: 0.64 },
+    Axanthic: { low: 1800, high: 7200, center: 3900, pressure: 0.61 },
+    Harlequin: { low: 700, high: 3000, center: 1550, pressure: 0.55 }
+  };
+  var aiStyles = ['稳健型', '节奏型', '收藏型', '观察型'];
+  var aiBidderNames = ['紫曜策略·A', '紫曜策略·B', '紫曜策略·C'];
+
+  function hashNumber(value) {
+    var text = String(value == null ? '' : value);
+    var hash = 2166136261;
+    for (var index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  }
+
+  function hashUnit(value) {
+    return hashNumber(value) / 4294967295;
+  }
+
+  function roundToStep(value, step) {
+    var size = Math.max(1, Number(step) || 1);
+    return Math.max(size, Math.round((Number(value) || 0) / size) * size);
+  }
+
+  function marketBandFor(morph) {
+    return marketBands[morph] || { low: 700, high: 3000, center: 1500, pressure: 0.55 };
+  }
+
+  function qualityScoreFor(seed, index) {
+    if (seed && seed[1] === 'CHW') return 0.91;
+    var focus = String(seed[3] || '');
+    var lexicalBonus = (focus.indexOf('完整') >= 0 ? 0.08 : 0)
+      + (focus.indexOf('连续') >= 0 ? 0.06 : 0)
+      + (focus.indexOf('高对比') >= 0 ? 0.05 : 0)
+      + (focus.indexOf('稳定') >= 0 ? 0.04 : 0);
+    var base = 0.52 + (index % 7) * 0.055 + hashUnit(seed[0]) * 0.08;
+    return clamp(base + lexicalBonus, 0.5, 0.96);
+  }
+
+  function marketSnapshot(seed, index, increment) {
+    var band = marketBandFor(seed[1]);
+    var quality = qualityScoreFor(seed, index);
+    var estimate = roundToStep(band.low + (band.high - band.low) * quality, increment);
+    var minimumBudget = Number(seed[2]) + increment * (4 + (index % 3));
+    var targetBudget = Math.max(minimumBudget, estimate * (0.78 + quality * 0.12));
+    var aiBudget = Math.min(band.high, roundToStep(targetBudget, increment));
+    if (seed[1] === 'CHW') {
+      /* The launch lot has a wider premium band than the general catalogue:
+         its visible price starts at ¥3,680 while the strategy ceiling sits
+         near ¥6,800, leaving room for several believable responses. */
+      estimate = roundToStep(5200, increment);
+      aiBudget = roundToStep(6800, increment);
+    }
+    if (aiBudget <= Number(seed[2])) aiBudget = Number(seed[2]) + increment * (4 + (index % 3));
+    return {
+      low: band.low,
+      high: band.high,
+      estimate: estimate,
+      quality: quality,
+      pressure: band.pressure,
+      aiBudget: aiBudget,
+      aiStyle: aiStyles[hashNumber(seed[0]) % aiStyles.length]
+    };
+  }
+
+  function incrementFor(seed, index) {
+    var price = Number(seed && seed[2]) || 0;
+    /* CHW is positioned as a higher-ticket purple-line drop: ¥200 steps at
+       the opening band, then ¥300 once the visible price crosses ¥5,000. */
+    if (seed && seed[1] === 'CHW') return price >= 5000 ? 300 : 200;
+    if (price < 1000) return 50;
+    if (price < 5000) return 100;
+    if (price < 10000) return 200;
+    return 500;
+  }
+
+  function incrementForLot(lot) {
+    if (!lot) return 100;
+    if (lot.morph === 'CHW') return Number(lot.price) >= 5000 ? 300 : 200;
+    var price = Number(lot.price) || 0;
+    if (price < 1000) return 50;
+    if (price < 5000) return 100;
+    if (price < 10000) return 200;
+    return 500;
+  }
+
   var lotSeeds = [
-    ['日落火焰', 'Harlequin', 1280, '橙红底色与高对比背线', '公', '2024', '南岛爬舍'],
+    ['CHW · 紫曜首发', 'CHW', 3680, '薰衣草紫底与深紫侧纹', '公', '2025', '紫曜实验室'],
     ['墨线 Sable', 'Sable', 980, '背线收束与烟棕侧身', '母', '2023', '雨林档案室'],
     ['乳白潮汐', 'Lily White', 1680, '乳白覆色的边缘完整度', '公', '2024', '海岛育种局'],
     ['冷月 Ax', 'Axanthic', 2380, '冷灰底色与火焰线对比', '母', '2023', '灰阶研究所'],
@@ -114,7 +219,7 @@
   var profileFallback = '睫角守宫拍品';
 
   function scheduleFor(index) {
-    if (index === 0) return { start: -7200, end: 8322 };
+    if (index === 0) return { start: -7200, end: 28800 };
     if (index < 12) return { start: -((index + 2) * 1670), end: 10400 + index * 2380 };
     if (index < 20) {
       var soonStart = (index - 11) * 1800 + 600;
@@ -141,19 +246,26 @@
   function createLots() {
     return lotSeeds.map(function (seed, index) {
       var schedule = scheduleFor(index);
-      var increment = index % 6 === 0 ? 100 : (index % 3 === 0 ? 200 : 100);
+      var increment = incrementFor(seed, index);
       var profile = geneProfiles[seed[1]];
-      var image = imagePool[index % imagePool.length];
-      var gallery = [image, imagePool[(index + 7) % imagePool.length], imagePool[(index + 15) % imagePool.length]];
+      var snapshot = marketSnapshot(seed, index, increment);
+      /* CHW is reserved for the launch lot. Keeping it out of the rotating
+         archive pool prevents another lot's gallery from showing the purple
+         launch image or inheriting its source label. */
+      var image = index === 0 ? 'chw.jpeg' : imagePool[(index - 1) % imagePool.length];
+      var gallery = index === 0
+        ? ['chw.jpeg', 'commons-face.jpg', 'commons-back.jpg']
+        : [image, imagePool[(index + 6) % imagePool.length], imagePool[(index + 14) % imagePool.length]];
       return {
         id: 'GX-' + String(101 + index),
+        displayId: seed[1] === 'CHW' ? 'CHW-001' : 'GX-' + String(101 + index),
         title: seed[0],
         morph: seed[1],
         image: image,
         gallery: gallery,
         price: seed[2],
         increment: increment,
-        deposit: index % 4 === 0 ? 300 : (index % 4 === 1 ? 500 : 800),
+        deposit: 50,
         focus: seed[3],
         gender: seed[4],
         year: seed[5],
@@ -164,7 +276,17 @@
         description: profile.description + ' 本场档案聚焦“' + seed[3] + '”，以正面、背部和侧身三个视角记录外观表现，便于竞买人在出价前建立完整判断。',
         tags: profile.tags.concat(index % 2 ? ['单只档案'] : ['繁育记录']),
         bids: makeInitialBids(seed[2], increment, index),
-        botMax: seed[2] + increment * (3 + index % 4),
+        marketLow: snapshot.low,
+        marketHigh: snapshot.high,
+        marketEstimate: snapshot.estimate,
+        qualityScore: snapshot.quality,
+        aiPressure: snapshot.pressure,
+        aiStyle: snapshot.aiStyle,
+        aiBudget: snapshot.aiBudget,
+        aiResponses: 0,
+        aiLastResponseAt: 0,
+        aiTimer: null,
+        botMax: snapshot.aiBudget,
         proxyMax: null,
         favorite: false
       };
@@ -181,7 +303,7 @@
     activity: [],
     orders: [],
     settled: {},
-    version: 5
+    version: 7
   };
   var activeLotId = 'GX-101';
   var pendingDepositLotId = null;
@@ -196,26 +318,49 @@
   function readState() {
     try {
       var saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null');
-      if (!saved || saved.version !== 5) return;
+      if (!saved || saved.version !== 7) return;
       appState.balance = Number(saved.balance) >= 0 ? Number(saved.balance) : 2000;
       appState.frozen = Number(saved.frozen) >= 0 ? Number(saved.frozen) : 0;
       appState.deposits = saved.deposits && typeof saved.deposits === 'object' ? saved.deposits : {};
       appState.depositStatuses = saved.depositStatuses && typeof saved.depositStatuses === 'object' ? saved.depositStatuses : {};
+      /* Deposit policy is uniform across the market. Older saved sessions are
+         normalized so a previous freeze can never leak into the new CHW drop.
+         A missing status means the old flow treated the deposit as frozen, so
+         resolve that default before correcting the available balance. */
+      Object.keys(appState.deposits).forEach(function (lotId) {
+        var previous = Number(appState.deposits[lotId]) || 50;
+        var status = appState.depositStatuses[lotId] || 'frozen';
+        appState.depositStatuses[lotId] = status;
+        if (previous !== 50 && status === 'frozen') appState.balance += previous - 50;
+        appState.deposits[lotId] = 50;
+      });
+      appState.balance = Math.max(0, appState.balance);
       appState.favorites = Array.isArray(saved.favorites) ? saved.favorites : [];
       if (Array.isArray(saved.activity)) appState.activity = saved.activity.slice(0, 50);
-      appState.orders = Array.isArray(saved.orders) ? saved.orders : [];
+      appState.orders = Array.isArray(saved.orders) ? saved.orders.map(function (order) {
+        var normalized = Object.assign({}, order);
+        normalized.deposit = 50;
+        return normalized;
+      }) : [];
       appState.settled = saved.settled && typeof saved.settled === 'object' ? saved.settled : {};
-      Object.keys(appState.deposits).forEach(function (lotId) {
-        if (!appState.depositStatuses[lotId]) appState.depositStatuses[lotId] = 'frozen';
-      });
+      appState.frozen = Object.keys(appState.deposits).reduce(function (total, lotId) {
+        return total + (appState.depositStatuses[lotId] === 'frozen' ? 50 : 0);
+      }, 0);
       if (saved.lots && typeof saved.lots === 'object') {
         lots.forEach(function (lot) {
           var savedLot = saved.lots[lot.id];
           if (!savedLot) return;
           if (Number(savedLot.price) > 0) lot.price = Number(savedLot.price);
+          /* Recompute the step from the restored price. CHW changes from
+             ¥200 to ¥300 after ¥5,000; otherwise a refresh can show and
+             accept the wrong next bid. */
+          lot.increment = incrementForLot(lot);
           if (Array.isArray(savedLot.bids) && savedLot.bids.length) lot.bids = savedLot.bids;
           if (Number(savedLot.proxyMax) > 0) lot.proxyMax = Number(savedLot.proxyMax);
           if (savedLot.botMax) lot.botMax = Number(savedLot.botMax);
+          if (Number(savedLot.aiBudget) > 0) lot.aiBudget = Number(savedLot.aiBudget);
+          if (Number(savedLot.aiResponses) >= 0) lot.aiResponses = Number(savedLot.aiResponses);
+          if (Number(savedLot.aiLastResponseAt) > 0) lot.aiLastResponseAt = Number(savedLot.aiLastResponseAt);
           if (Number(savedLot.startsAt) > 0) lot.startsAt = Number(savedLot.startsAt);
           if (Number(savedLot.endsAt) > 0) lot.endsAt = Number(savedLot.endsAt);
         });
@@ -229,10 +374,20 @@
     try {
       var lotState = {};
       lots.forEach(function (lot) {
-        lotState[lot.id] = { price: lot.price, bids: lot.bids, proxyMax: lot.proxyMax, botMax: lot.botMax, startsAt: lot.startsAt, endsAt: lot.endsAt };
+        lotState[lot.id] = {
+          price: lot.price,
+          bids: lot.bids,
+          proxyMax: lot.proxyMax,
+          botMax: lot.botMax,
+          aiBudget: lot.aiBudget,
+          aiResponses: lot.aiResponses,
+          aiLastResponseAt: lot.aiLastResponseAt,
+          startsAt: lot.startsAt,
+          endsAt: lot.endsAt
+        };
       });
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        version: 5,
+        version: 7,
         balance: appState.balance,
         frozen: appState.frozen,
         deposits: appState.deposits,
@@ -280,6 +435,7 @@
       bidder: bid.bidder,
       amount: bid.amount,
       at: bid.at || Date.now(),
+      ai: !!bid.ai,
       label: label || (bid.proxy ? '自动代理' : '现场出价')
     });
     appState.activity = appState.activity.slice(0, 50);
@@ -305,13 +461,16 @@
    * The mirror list is deliberately bounded: a broken image can never create
    * an endless network loop.
    */
+  /* 35d071e contains the CHW launch image as well as the Commons archive.
+     Keep this revision pinned for deterministic cache and mainland mirrors;
+     update it once a later source commit is published. */
   var imageMirrorBases = [
-    'https://cdn.jsdelivr.net/gh/leixianya/gecko-auction@f54da87878652472f950bbc38523993d0d148da3/assets/',
-    'https://testingcf.jsdelivr.net/gh/leixianya/gecko-auction@f54da87878652472f950bbc38523993d0d148da3/assets/',
-    'https://fastly.jsdelivr.net/gh/leixianya/gecko-auction@f54da87878652472f950bbc38523993d0d148da3/assets/',
-    'https://gcore.jsdelivr.net/gh/leixianya/gecko-auction@f54da87878652472f950bbc38523993d0d148da3/assets/',
-    'https://quantil.jsdelivr.net/gh/leixianya/gecko-auction@f54da87878652472f950bbc38523993d0d148da3/assets/',
-    'https://raw.githubusercontent.com/leixianya/gecko-auction/f54da87878652472f950bbc38523993d0d148da3/assets/'
+    'https://cdn.jsdelivr.net/gh/leixianya/gecko-auction@35d071e25257a3c0dc4b6c6642dc2642f2ea86ef/assets/',
+    'https://testingcf.jsdelivr.net/gh/leixianya/gecko-auction@35d071e25257a3c0dc4b6c6642dc2642f2ea86ef/assets/',
+    'https://fastly.jsdelivr.net/gh/leixianya/gecko-auction@35d071e25257a3c0dc4b6c6642dc2642f2ea86ef/assets/',
+    'https://gcore.jsdelivr.net/gh/leixianya/gecko-auction@35d071e25257a3c0dc4b6c6642dc2642f2ea86ef/assets/',
+    'https://quantil.jsdelivr.net/gh/leixianya/gecko-auction@35d071e25257a3c0dc4b6c6642dc2642f2ea86ef/assets/',
+    'https://raw.githubusercontent.com/leixianya/gecko-auction/35d071e25257a3c0dc4b6c6642dc2642f2ea86ef/assets/'
   ];
   var imageCandidates = typeof WeakMap === 'function' ? new WeakMap() : null;
 
@@ -327,7 +486,7 @@
     var original = String(src || '');
     var file = imageFileName(original);
     var values = [original];
-    if (file && /^commons-[\w.-]+$/i.test(file)) {
+    if (file && /^(?:commons-[\w.-]+|chw[\w.-]*)$/i.test(file)) {
       imageMirrorBases.forEach(function (base) { values.push(base + encodeURIComponent(file)); });
     }
     return values.filter(function (value, index, all) { return value && all.indexOf(value) === index; });
@@ -437,6 +596,12 @@
       return haystack.indexOf(query) !== -1;
     });
     result.sort(function (a, b) {
+      /* The launch lot leads the default ending view. Explicit price/newness
+         sorts keep their literal ordering so the controls remain trustworthy. */
+      if (sortMode === 'ending') {
+        if (a.morph === 'CHW' && b.morph !== 'CHW') return -1;
+        if (b.morph === 'CHW' && a.morph !== 'CHW') return 1;
+      }
       if (sortMode === 'newest') return b.startsAt - a.startsAt;
       if (sortMode === 'price-low') return a.price - b.price;
       if (sortMode === 'price-high') return b.price - a.price;
@@ -455,14 +620,15 @@
     var status = statusOf(lot);
     var favorite = appState.favorites.indexOf(lot.id) !== -1;
     var source = assetUrl(lot.image);
-    return '<article class="lot-card" data-lot-id="' + esc(lot.id) + '">' +
+    var isChw = lot.morph === 'CHW';
+    return '<article class="lot-card' + (isChw ? ' lot-card-chw' : '') + '" data-lot-id="' + esc(lot.id) + '">' +
       '<div class="lot-card-image" data-image-frame data-fallback="' + esc(lot.title) + '">' +
         '<img src="' + esc(source) + '" alt="' + esc(lot.title + ' 睫角守宫') + '" loading="lazy" decoding="async" />' +
-        '<div class="card-top"><span>' + esc(lot.id) + '</span><span>' + esc(lot.morph) + '</span></div>' +
+        '<div class="card-top"><span>' + esc(lot.displayId || (isChw ? 'CHW-001' : lot.id)) + '</span><span>' + esc(lot.morph) + '</span></div>' +
         '<div class="card-bottom"><span class="card-status ' + status + '">' + statusLabel(status) + '</span><button class="card-heart' + (favorite ? ' is-saved' : '') + '" type="button" data-favorite="' + esc(lot.id) + '" aria-label="' + (favorite ? '取消收藏' : '收藏拍品') + '">' + (favorite ? '♥' : '♡') + '</button></div>' +
       '</div>' +
       '<div class="lot-card-body"><h3>' + esc(lot.title) + '</h3><p class="lot-card-subtitle">' + esc(lot.focus) + '</p>' +
-      '<div class="lot-tags">' + lot.tags.slice(0, 3).map(function (tag) { return '<span>' + esc(tag) + '</span>'; }).join('') + '</div>' +
+      '<div class="lot-tags">' + lot.tags.slice(0, 3).map(function (tag) { return '<span>' + esc(tag) + '</span>'; }).join('') + (isChw ? '<span class="ai-card-tag">AI 竞价</span>' : '') + '</div>' +
       '<div class="card-price-row"><div><small>当前价</small><strong>' + money(lot.price) + '</strong></div><div class="card-time"><small>' + (status === 'soon' ? '开场倒计时' : (status === 'ended' ? '成交状态' : '距结束')) + '</small><strong class="' + status + '" data-countdown="' + esc(lot.id) + '">' + remainingText(lot, true) + '</strong></div></div>' +
       '<button class="card-open" type="button" data-open-lot="' + esc(lot.id) + '"><span>查看拍品档案</span><span>↗</span></button></div></article>';
   }
@@ -485,20 +651,22 @@
   }
 
   function renderFeatured() {
-    var liveLot = getLot('GX-101');
-    if (!liveLot || statusOf(liveLot) === 'ended') liveLot = lots.find(function (lot) { return statusOf(lot) === 'live'; }) || lots[0];
+    /* CHW is the house drop and remains the hero even after its timer rolls
+       over, so visitors can still inspect the complete archive and result. */
+    var liveLot = getLot('GX-101') || lots.find(function (lot) { return statusOf(lot) === 'live'; }) || lots[0];
     if (!liveLot) return;
     var profile = geneProfiles[liveLot.morph];
     var image = $('featured-image');
     setImage(image, assetUrl(liveLot.image), liveLot.title + ' 睫角守宫', liveLot.title);
     wireImage(image);
-    if ($('featured-lot-id')) $('featured-lot-id').textContent = liveLot.id;
+    if ($('featured-lot-id')) $('featured-lot-id').textContent = liveLot.displayId || liveLot.id;
     if ($('featured-title')) $('featured-title').textContent = liveLot.title;
     if ($('featured-subtitle')) $('featured-subtitle').textContent = profile.label + ' · ' + liveLot.focus;
     if ($('featured-price')) $('featured-price').textContent = money(liveLot.price);
     if ($('featured-next')) $('featured-next').textContent = statusOf(liveLot) === 'live' ? '下一手 ' + money(liveLot.price + liveLot.increment) + ' 起' : '等待开场';
     if ($('featured-countdown')) $('featured-countdown').textContent = remainingText(liveLot, true);
     if ($('featured-timer-label')) $('featured-timer-label').textContent = statusOf(liveLot) === 'soon' ? '距开场' : (statusOf(liveLot) === 'ended' ? '状态' : '距结束');
+    if ($('featured-increment')) $('featured-increment').textContent = '阶梯加价 ' + money(liveLot.increment);
     if ($('featured-bids')) $('featured-bids').textContent = liveLot.bids.length + ' 次出价';
     if ($('featured-deposit')) $('featured-deposit').textContent = money(liveLot.deposit);
     if ($('featured-chip')) {
@@ -515,6 +683,43 @@
       featuredWatch.textContent = saved ? '♥' : '♡';
       featuredWatch.setAttribute('aria-label', saved ? '取消收藏拍品' : '收藏拍品');
     }
+    renderAiIndicators(liveLot);
+  }
+
+  function renderAiIndicators(lot) {
+    if (!lot) return;
+    var seats = lot.morph === 'CHW' ? 3 : 2;
+    var featuredCount = $('featured-ai-count');
+    if (featuredCount) featuredCount.textContent = seats + ' SEATS';
+    var dockTitle = $('dock-title');
+    var dockPrice = $('dock-price');
+    var dockCountdown = $('dock-countdown');
+    if (dockTitle) dockTitle.textContent = lot.title;
+    if (dockPrice) dockPrice.textContent = money(lot.price);
+    if (dockCountdown) dockCountdown.textContent = remainingText(lot, true);
+  }
+
+  /* The modal has its own AI console. It is intentionally separate from the
+     hero/dock indicators because the hero keeps ticking while another lot's
+     archive is open. */
+  function renderModalAiIndicators(lot) {
+    if (!lot) return;
+    var budget = aiBudgetFor(lot);
+    var low = Number(lot.marketLow || lot.price || 1);
+    var high = Math.max(low, Number(lot.marketHigh || budget || low));
+    var progress = clamp(((Number(lot.price || low) - low) / Math.max(1, high - low)) * 100, 7, 100);
+    var seats = lot.morph === 'CHW' ? 3 : 2;
+    var seatCount = $('ai-seat-count');
+    if (seatCount) seatCount.textContent = String(seats);
+    var meter = $('ai-progress-bar');
+    if (meter) meter.style.width = progress + '%';
+    var status = $('ai-status');
+    if (status) {
+      var responseCount = Number(lot.aiResponses || 0);
+      status.textContent = lot.proxyMax
+        ? '你的心理上限 ' + money(lot.proxyMax) + ' 已接入；AI 会在需要时逐手跟价。'
+        : (responseCount ? '已完成 ' + responseCount + ' 次策略应价 · 当前预算上限 ' + money(budget) : '开启后，系统会以最小加价跟进，不超过你设定的心理上限。');
+    }
   }
 
   function renderActivity() {
@@ -524,7 +729,7 @@
     if (!entries.length) {
       lots.forEach(function (lot) {
         lot.bids.slice(-2).forEach(function (bid) {
-          entries.push({ lotId: lot.id, title: lot.title, bidder: bid.bidder, amount: bid.amount, at: bid.at, label: bid.proxy ? '自动代理' : '现场出价' });
+          entries.push({ lotId: lot.id, title: lot.title, bidder: bid.bidder, amount: bid.amount, at: bid.at, ai: !!bid.ai, label: bid.ai ? '策略应价' : (bid.proxy ? '自动代理' : '现场出价') });
         });
       });
       entries.sort(function (a, b) { return b.at - a.at; });
@@ -533,7 +738,8 @@
     list.innerHTML = entries.slice(0, limit).map(function (entry) {
       var initials = String(entry.bidder || '竞').slice(0, 2);
       var ago = Math.max(1, Math.floor((Date.now() - Number(entry.at || Date.now())) / 60000));
-      return '<div class="activity-item"><span class="activity-avatar">' + esc(initials) + '</span><div class="activity-main"><strong>' + esc(entry.bidder) + '</strong><span>' + esc(entry.title) + ' · ' + esc(entry.label || '现场出价') + '</span></div><b class="activity-price">' + money(entry.amount) + '</b><small class="activity-time">' + (ago < 60 ? ago + ' 分钟前' : Math.floor(ago / 60) + ' 小时前') + '</small></div>';
+      var aiMark = entry.ai || entry.label === '策略应价' ? '<i class="ai-badge">AI</i>' : '';
+      return '<div class="activity-item' + (aiMark ? ' is-ai' : '') + '"><span class="activity-avatar">' + esc(initials) + '</span><div class="activity-main"><strong>' + esc(entry.bidder) + ' ' + aiMark + '</strong><span>' + esc(entry.title) + ' · ' + esc(entry.label || '现场出价') + '</span></div><b class="activity-price">' + money(entry.amount) + '</b><small class="activity-time">' + (ago < 60 ? ago + ' 分钟前' : Math.floor(ago / 60) + ' 小时前') + '</small></div>';
     }).join('');
     var more = $('activity-more');
     if (more) more.textContent = activityExpanded ? '收起出价记录 ↑' : '查看全部出价记录 ↗';
@@ -663,7 +869,10 @@
       input.disabled = status !== 'live';
     }
     var hint = $('bid-hint');
-    if (hint) hint.textContent = status === 'live' ? '最低出价 ' + money(min) + ' · 每手加价 ' + money(lot.increment) : (status === 'soon' ? '拍品尚未开场，请在倒计时结束后出价' : '本场已截拍，等待订单结算');
+    if (hint) {
+      var strategyHint = ' · 对手策略：' + (lot.aiStyle || '分层预算') + ' / 上限 ' + money(aiBudgetFor(lot));
+      hint.textContent = status === 'live' ? '最低出价 ' + money(min) + ' · 每手加价 ' + money(lot.increment) + strategyHint : (status === 'soon' ? '拍品尚未开场，请在倒计时结束后出价' : '本场已截拍，等待订单结算');
+    }
     var place = $('place-bid-button');
     if (place) {
       place.disabled = status !== 'live';
@@ -690,8 +899,127 @@
     var ranked = Object.keys(byBidder).map(function (name) { return byBidder[name]; }).sort(function (a, b) { return b.amount - a.amount || b.at - a.at; });
     list.innerHTML = ranked.slice(0, 10).map(function (bid, index) {
       var isMe = bid.bidder === '你' || bid.bidder === '你（代理）';
-      return '<div class="history-row"><span class="history-rank">' + String(index + 1).padStart(2, '0') + '</span><span class="history-name">' + esc(bid.bidder) + '<small>' + (isMe ? '当前账户' : '竞买人') + '</small></span><span class="history-flag">' + (bid.proxy ? '代理' : (index === 0 ? '领先' : '出价')) + '</span><b class="history-amount">' + money(bid.amount) + '</b></div>';
+      var flag = bid.ai ? '策略应价' : (bid.proxy ? '代理' : (index === 0 ? '领先' : '出价'));
+      var aiMark = bid.ai ? '<i class="ai-badge">AI</i>' : '';
+      return '<div class="history-row' + (bid.ai ? ' is-ai' : '') + '"><span class="history-rank">' + String(index + 1).padStart(2, '0') + '</span><span class="history-name">' + esc(bid.bidder) + ' ' + aiMark + '<small>' + (isMe ? '当前账户' : (bid.ai ? '策略席位 · 信用 100' : '竞买人')) + '</small></span><span class="history-flag">' + esc(flag) + '</span><b class="history-amount">' + money(bid.amount) + '</b></div>';
     }).join('');
+  }
+
+  function renderModalSource(lot, file) {
+    if (!lot) return;
+    var currentFile = imageFileName(file || lot.image);
+    var isChw = currentFile.toLowerCase() === 'chw.jpeg';
+    var isPrimary = currentFile === imageFileName(lot.image);
+    if ($('modal-image-label')) $('modal-image-label').textContent = isChw ? 'CHW / PURPLE LINE' : 'ARCHIVE ANGLE / COMMONS';
+    if ($('modal-source')) $('modal-source').innerHTML = isChw
+      ? '拍品主图：AI 生成视觉素材 · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看素材说明 ↗</a>'
+      : (isPrimary ? '拍品图片档案：Wikimedia Commons · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看作者与许可信息 ↗</a>' : '角度资料图：Wikimedia Commons · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看作者与许可信息 ↗</a>');
+  }
+
+  /*
+   * A small deterministic rival strategy makes a local auction feel alive
+   * while keeping every decision traceable inside the page.  The
+   * strategy uses the lot's page-local market band, quality score and a seeded
+   * roll.  Every trigger is bounded by both a response budget and a cooldown,
+   * so prices cannot run away or oscillate when a user double-clicks.
+   */
+  var aiConfig = {
+    maxRoundsPerTrigger: 2,
+    maxResponsesPerLot: 12,
+    cooldownMs: 760,
+    minDelayMs: 480,
+    delayJitterMs: 560
+  };
+
+  function aiBudgetFor(lot) {
+    var candidate = Number(lot.aiBudget || lot.botMax || 0);
+    var ceiling = Number(lot.marketHigh || 0);
+    if (ceiling > 0) candidate = Math.min(candidate || ceiling, ceiling);
+    return candidate || ceiling || (lot.price + lot.increment);
+  }
+
+  function aiBidderFor(lot) {
+    if (lot && lot.morph === 'CHW') return aiBidderNames[Number(lot.aiResponses || 0) % aiBidderNames.length];
+    return proxyNames[hashNumber(lot.id + '|rival|' + Number(lot.aiResponses || 0)) % proxyNames.length];
+  }
+
+  function aiCanRespond(lot, triggerAmount, round) {
+    if (!lot || statusOf(lot) !== 'live') return false;
+    if (Number(lot.aiResponses || 0) >= aiConfig.maxResponsesPerLot) return false;
+    var budget = aiBudgetFor(lot);
+    if (lot.price >= budget) return false;
+    /* The first reply is intentionally reliable so the interaction is
+       discoverable during a live click-through; later replies use the seeded
+       pressure curve below and may stop naturally. */
+    if (Number(lot.aiResponses || 0) === 0 && Number(lot.price) + lot.increment <= budget) return true;
+    var bandSpan = Math.max(1, Number(lot.marketHigh || budget) - Number(lot.marketLow || 0));
+    var relativePrice = clamp((lot.price - Number(lot.marketLow || 0)) / bandSpan, 0, 1);
+    var pressure = clamp(Number(lot.aiPressure || 0.56) + (Date.now() > lot.endsAt - 180000 ? 0.1 : 0), 0.18, 0.9);
+    /* As the visible price approaches the top of its band, the rival becomes
+       less willing to chase.  A quality score adds a modest premium rather
+       than multiplying the price without a ceiling. */
+    pressure -= Math.max(0, relativePrice - 0.62) * 0.42;
+    pressure += (Number(lot.qualityScore || 0.7) - 0.7) * 0.16;
+    var seed = lot.id + '|' + Math.round(Number(triggerAmount || lot.price)) + '|' + Number(lot.aiResponses || 0) + '|' + Number(round || 0);
+    return hashUnit(seed) < clamp(pressure, 0.12, 0.88);
+  }
+
+  function refreshAfterAiBid(lot) {
+    writeState();
+    renderLots();
+    renderFeatured();
+    renderActivity();
+    if ($('lot-modal') && $('lot-modal').classList.contains('is-open') && activeLotId === lot.id) {
+      if ($('modal-price')) $('modal-price').textContent = money(lot.price);
+      if ($('modal-bid-count')) $('modal-bid-count').textContent = lot.bids.length + ' 次出价';
+      updateModalBidControls(lot);
+      renderModalAiIndicators(lot);
+      renderHistory(lot);
+    }
+  }
+
+  function runAiResponse(lot, triggerAmount) {
+    if (!lot || statusOf(lot) !== 'live') return;
+    lot.aiTimer = null;
+    var rounds = 0;
+    var acted = false;
+    var userProxyLimit = Number(lot.proxyMax || 0);
+    while (rounds < aiConfig.maxRoundsPerTrigger && statusOf(lot) === 'live') {
+      var top = topBidFor(lot);
+      if (top && isCurrentUserBid(top)) {
+        if (!aiCanRespond(lot, triggerAmount, rounds)) break;
+        var budget = aiBudgetFor(lot);
+        var amount = Math.min(budget, lot.price + lot.increment);
+        if (amount <= lot.price) break;
+        pushBid(lot, aiBidderFor(lot), amount, true, { ai: true, aiStyle: lot.aiStyle });
+        acted = true;
+        rounds += 1;
+      } else if (top && top.bidder && userProxyLimit > lot.price) {
+        /* A user's stored proxy ceiling answers one rival step at a time. */
+        var userAmount = Math.min(userProxyLimit, lot.price + lot.increment);
+        if (userAmount <= lot.price) break;
+        pushBid(lot, '你（代理）', userAmount, true, { userProxy: true });
+        acted = true;
+        rounds += 1;
+      } else {
+        break;
+      }
+    }
+    if (acted) {
+      var topAfter = topBidFor(lot);
+      var leadText = topAfter && isCurrentUserBid(topAfter) ? '你暂时领先' : '对手策略已应价';
+      showToast(lot.aiStyle + '对手策略：' + leadText + ' · 当前价 ' + money(lot.price));
+      refreshAfterAiBid(lot);
+    }
+  }
+
+  function queueAiResponse(lot, triggerAmount) {
+    if (!lot || statusOf(lot) !== 'live') return;
+    if (lot.aiTimer) window.clearTimeout(lot.aiTimer);
+    var sinceLast = Date.now() - Number(lot.aiLastResponseAt || 0);
+    var wait = Math.max(0, aiConfig.cooldownMs - sinceLast);
+    wait += aiConfig.minDelayMs + Math.floor(hashUnit(lot.id + '|' + lot.bids.length) * aiConfig.delayJitterMs);
+    lot.aiTimer = window.setTimeout(function () { runAiResponse(lot, triggerAmount); }, wait);
   }
 
   function openLot(id) {
@@ -702,23 +1030,27 @@
     var modalImage = $('modal-image');
     setImage(modalImage, assetUrl(lot.image), lot.title + ' 睫角守宫', lot.title);
     wireImage(modalImage);
-    if ($('modal-id')) $('modal-id').textContent = lot.id;
+    if ($('modal-id')) $('modal-id').textContent = lot.displayId || lot.id;
     if ($('modal-title')) $('modal-title').textContent = lot.title;
     if ($('modal-subtitle')) $('modal-subtitle').textContent = profile.subtitle + ' · ' + lot.focus;
-    if ($('modal-description')) $('modal-description').textContent = lot.description;
+    if ($('modal-description')) {
+      $('modal-description').textContent = lot.description + ' 页面价带：' + money(lot.marketLow) + '–' + money(lot.marketHigh) + '；档案评分 ' + Math.round(Number(lot.qualityScore || 0.7) * 100) + ' / 100。';
+    }
     if ($('modal-price')) $('modal-price').textContent = money(lot.price);
     if ($('modal-bid-count')) $('modal-bid-count').textContent = lot.bids.length + ' 次出价';
     if ($('modal-status')) {
       $('modal-status').textContent = statusLabel(statusOf(lot));
       $('modal-status').className = 'status-badge ' + statusOf(lot);
     }
-    if ($('modal-image-label')) $('modal-image-label').textContent = 'WIKIMEDIA COMMONS / ARCHIVE';
-    if ($('modal-source')) $('modal-source').innerHTML = '图片档案：Wikimedia Commons · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看作者与许可信息 ↗</a>';
+    renderModalSource(lot, lot.image);
     if ($('modal-attributes')) {
       $('modal-attributes').innerHTML = [
         ['基因方向', profile.label], ['性别', lot.gender], ['出生年份', lot.year],
         ['卖家', lot.seller], ['卖家评分', lot.sellerScore + ' / 5.0'], ['加价幅度', money(lot.increment)],
-        ['保证金', money(lot.deposit)], ['运输方式', '专线冷暖箱'], ['档案编号', lot.id]
+        ['保证金', money(lot.deposit)], ['运输方式', '专线冷暖箱'], ['档案编号', lot.id],
+        ['同类价带', money(lot.marketLow) + '–' + money(lot.marketHigh)],
+        ['页面估值', money(lot.marketEstimate)], ['档案评分', Math.round(Number(lot.qualityScore || 0.7) * 100) + ' / 100'],
+        ['应价风格', lot.aiStyle + ' · 上限 ' + money(lot.aiBudget)]
       ].map(function (pair) { return '<div class="attribute-cell"><small>' + esc(pair[0]) + '</small><strong>' + esc(pair[1]) + '</strong></div>'; }).join('');
     }
     var thumbs = $('modal-thumbs');
@@ -729,6 +1061,7 @@
       $$('.modal-thumb img', thumbs).forEach(wireImage);
     }
     updateModalBidControls(lot);
+    renderModalAiIndicators(lot);
     renderHistory(lot);
     openModal('lot-modal');
     window.setTimeout(function () { if ($('bid-input') && statusOf(lot) === 'live') $('bid-input').focus(); }, 260);
@@ -802,11 +1135,24 @@
     }
   }
 
-  function pushBid(lot, bidder, amount, proxy) {
+  function pushBid(lot, bidder, amount, proxy, meta) {
     var bid = { bidder: bidder, amount: amount, at: Date.now(), proxy: !!proxy };
+    if (meta && typeof meta === 'object') {
+      Object.keys(meta).forEach(function (key) { bid[key] = meta[key]; });
+    }
     lot.bids.push(bid);
     lot.price = amount;
-    addActivity(lot, bid, proxy ? '自动代理' : '现场出价');
+    lot.increment = incrementForLot(lot);
+    if (statusOf(lot) === 'live' && lot.endsAt - bid.at <= 120000) {
+      lot.endsAt += 120000;
+      lot.auctionExtensions = Number(lot.auctionExtensions || 0) + 1;
+      bid.extended = true;
+    }
+    if (bid.ai) {
+      lot.aiResponses = Number(lot.aiResponses || 0) + 1;
+      lot.aiLastResponseAt = bid.at;
+    }
+    addActivity(lot, bid, bid.ai ? '策略应价' : (proxy ? '自动代理' : '现场出价'));
     return bid;
   }
 
@@ -819,14 +1165,14 @@
     if (botLimit >= maximum + lot.increment) {
       var counter = Math.min(maximum + lot.increment, botLimit);
       if (counter > maximum) counter = maximum + lot.increment;
-      pushBid(lot, proxyNames[lot.id.slice(-1).charCodeAt(0) % proxyNames.length], counter, true);
+      pushBid(lot, aiBidderFor(lot), counter, true, { ai: true, aiStyle: lot.aiStyle });
       showToast('代理上限已设为 ' + money(maximum) + '，对手代理暂时领先。');
       return userBid;
     }
     if (botLimit > visible) {
       var botBid = Math.min(botLimit, maximum - lot.increment);
       if (botBid > visible) {
-        pushBid(lot, proxyNames[lot.id.slice(-1).charCodeAt(0) % proxyNames.length], botBid, true);
+        pushBid(lot, aiBidderFor(lot), botBid, true, { ai: true, aiStyle: lot.aiStyle });
         visible = botBid;
       }
       if (maximum > visible) pushBid(lot, '你（代理）', Math.min(maximum, visible + lot.increment), true);
@@ -865,8 +1211,8 @@
     if (proxy) placeProxyBid(lot, amount);
     else {
       lot.proxyMax = null;
-      pushBid(lot, '你', amount, false);
-      showToast('出价成功，你以 ' + money(amount) + ' 暂时领先。');
+      var placedBid = pushBid(lot, '你', amount, false);
+      showToast('出价成功，你以 ' + money(amount) + ' 暂时领先。' + (placedBid.extended ? ' 截拍顺延 2 分钟。' : ''));
     }
     writeState();
     renderLots();
@@ -876,6 +1222,7 @@
     renderHistory(lot);
     if ($('modal-price')) $('modal-price').textContent = money(lot.price);
     if ($('modal-bid-count')) $('modal-bid-count').textContent = lot.bids.length + ' 次出价';
+    queueAiResponse(lot, amount);
   }
 
   function toggleFavorite(id) {
@@ -915,6 +1262,38 @@
     showToast('市场数据已刷新，倒计时与出价记录已同步。');
   }
 
+  /* On a narrow screen the fixed shortcut rail should not cover the CHW
+     title, price or primary action while the first card is being read. The
+     hero button remains available; the rail fades in once the list is near
+     the viewport and then stays available for quick bidding. */
+  function bindDockVisibility() {
+    var dock = $('auction-dock');
+    if (!dock || !window.matchMedia) return;
+    var media = window.matchMedia('(max-width: 620px)');
+    var ticking = false;
+    var sync = function () {
+      var mobile = media.matches;
+      var hero = $('featured-lot');
+      var heroBottom = hero ? hero.getBoundingClientRect().bottom + window.scrollY : 0;
+      var revealAt = heroBottom ? Math.max(420, heroBottom - window.innerHeight * 0.35) : 420;
+      var hidden = mobile && window.scrollY < revealAt;
+      dock.classList.toggle('is-collapsed', hidden);
+      dock.setAttribute('aria-hidden', String(hidden));
+      var dockBid = $('dock-bid');
+      if (dockBid) dockBid.tabIndex = hidden ? -1 : 0;
+    };
+    var onScroll = function () {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(function () { ticking = false; sync(); });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', sync);
+    if (media.addEventListener) media.addEventListener('change', sync);
+    else if (media.addListener) media.addListener(sync);
+    sync();
+  }
+
   function bindEvents() {
     var search = $('search-input');
     if (search) search.addEventListener('input', function () { searchQuery = search.value; visibleCount = 16; renderLots(); });
@@ -941,6 +1320,12 @@
     if (confirm) confirm.addEventListener('click', confirmDeposit);
     var place = $('place-bid-button');
     if (place) place.addEventListener('click', placeBid);
+    var dockBid = $('dock-bid');
+    if (dockBid) dockBid.addEventListener('click', function () { openLot(($('featured-lot') && $('featured-lot').dataset.lotId) || 'GX-101'); });
+    var bottomRules = $('bottom-rules');
+    if (bottomRules) bottomRules.addEventListener('click', function () { openModal('rules-modal'); });
+    var bottomWallet = $('bottom-wallet');
+    if (bottomWallet) bottomWallet.addEventListener('click', function () { updateWallet(); openModal('wallet-modal'); });
     var bidInput = $('bid-input');
     var adjustBid = function (delta) {
       var lot = getLot(activeLotId);
@@ -1003,6 +1388,7 @@
         var modalImage = $('modal-image');
         setImage(modalImage, thumb.dataset.thumb, thumb.dataset.alt, thumb.dataset.alt);
         $$('.modal-thumb').forEach(function (item) { item.classList.toggle('is-active', item === thumb); });
+        renderModalSource(getLot(activeLotId), thumb.dataset.thumb);
       }
     });
     document.addEventListener('keydown', function (event) {
@@ -1020,10 +1406,16 @@
     var featuredId = $('featured-lot') && $('featured-lot').dataset.lotId;
     var featuredLot = getLot(featuredId);
     if (featuredLot && $('featured-countdown')) $('featured-countdown').textContent = remainingText(featuredLot, true);
+    if (featuredLot) {
+      renderAiIndicators(featuredLot);
+      if ($('dock-countdown')) $('dock-countdown').textContent = remainingText(featuredLot, true);
+      if ($('dock-price')) $('dock-price').textContent = money(featuredLot.price);
+    }
     var modalLot = getLot(activeLotId);
     if (modalLot && $('lot-modal') && $('lot-modal').classList.contains('is-open')) {
       if ($('modal-status')) { $('modal-status').textContent = statusLabel(statusOf(modalLot)); $('modal-status').className = 'status-badge ' + statusOf(modalLot); }
       updateModalBidControls(modalLot);
+      renderModalAiIndicators(modalLot);
     }
     var previousState = window.__auctionLastStatus || '';
     var stateSignature = lots.map(function (lot) { return lot.id + ':' + statusOf(lot); }).join('|');
@@ -1045,6 +1437,7 @@
     renderLots();
     renderFeatured();
     renderActivity();
+    bindDockVisibility();
     updateWallet();
     updateCountdowns();
     countdownTimer = window.setInterval(updateCountdowns, 1000);
