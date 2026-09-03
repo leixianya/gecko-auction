@@ -8,7 +8,7 @@
    */
   /* Keep the state key stable so returning bidders do not lose their saved
      deposits or bid history when the catalogue is refreshed.  A fresh
-     browser session starts with no wallet credit; the legacy demo default is
+     browser session starts with no wallet credit; the legacy placeholder is
      recognised below and migrated only when that session was untouched. */
   var STORAGE_KEY = 'gecko-auction-state-v7';
   var INITIAL_BALANCE = 0;
@@ -39,8 +39,8 @@
   /* Non-CHW lots use locally hosted snapshots of the X/Twitter image set.
      Keeping the filenames local avoids pbs.twimg.com availability issues in
      mainland deployments; attribution and original post links live in
-     assets/ATTRIBUTIONS.md.  CHW's own gallery is intentionally handled in
-     createLots() and remains unchanged. */
+     assets/ATTRIBUTIONS.md.  CHW's launch image remains local and is handled
+     separately in createLots(). */
   var imagePool = [
     'x-gecko-01.jpg', 'x-gecko-02.jpg', 'x-gecko-03.jpg', 'x-gecko-04.jpg',
     'x-gecko-05.jpg', 'x-gecko-06.jpg', 'x-gecko-07.jpg', 'x-gecko-08.jpg',
@@ -56,8 +56,8 @@
   ];
 
   /* Keep the original post URL next to every local snapshot.  The archive
-     modal uses this map for its source link, so switching angles never loses
-     the provenance of a photograph. */
+     modal uses this map for its source link, preserving each photograph's
+     provenance. */
   var xImagePostLinks = {
     'x-gecko-01.jpg': 'https://x.com/MorphMarket/status/1669042399820013572',
     'x-gecko-02.jpg': 'https://x.com/MorphMarket/status/1669842314582192130',
@@ -103,6 +103,91 @@
     'x-gecko-42.jpg': 'https://x.com/MorphMarket/status/1881419345521500506'
   };
 
+  /*
+   * The image and its identifying text are one catalogue record.  These
+   * fields were transcribed from the matching public X/MorphMarket post in
+   * /tmp/morph_crested.json when the local snapshots were downloaded.  Keep
+   * `sourceMorph` (the post's variety wording) separate from `morph` (the
+   * site's six-family filter key): this preserves the source name without
+   * breaking the existing filters and price bands.  A lot is never allowed
+   * to borrow a synthetic name from a different photograph.
+   */
+  var xLotMetadata = {
+    'x-gecko-01.jpg': { sourceTitle: 'Light Yellow Base Ink Spot Dalmatian', sourceMorph: 'Ink Spot Dalmatian', morph: 'Harlequin', seller: 'Kryptiles', year: '2023', gender: '未注明' },
+    'x-gecko-02.jpg': { sourceTitle: 'Charcoal', sourceMorph: 'Charcoal', morph: 'Sable', seller: 'Sonoran Exotics', year: '2023', gender: '未注明' },
+    'x-gecko-03.jpg': { sourceTitle: 'Dark Tiger Subadult', sourceMorph: 'Dark Tiger', morph: 'Harlequin', seller: 'River South Exotics', year: '2023', gender: '未注明' },
+    'x-gecko-04.jpg': { sourceTitle: 'Super Red Dalmatian', sourceMorph: 'Super Red Dalmatian', morph: 'Harlequin', seller: 'Hobbs Exotic Reptiles', year: '2023', gender: '未注明' },
+    'x-gecko-05.jpg': { sourceTitle: 'High End LW', sourceMorph: 'High End Lily White', morph: 'Lily White', seller: 'Geckeysiss', year: '2023', gender: '未注明' },
+    'x-gecko-06.jpg': { sourceTitle: 'Super High-White Tricolor Pinstripe', sourceMorph: 'Super High-White Tricolor Pinstripe', morph: 'Harlequin', seller: 'Gekko Chamber', year: '2023', gender: '未注明' },
+    'x-gecko-07.jpg': { sourceTitle: 'Lombard Offspring Holdback Release', sourceMorph: 'Lombard Holdback', morph: 'Sable', seller: 'Mercury Geckos', year: '2025', gender: '未注明' },
+    'x-gecko-08.jpg': { sourceTitle: 'Dark Super Dalmatian', sourceMorph: 'Dark Super Dalmatian', morph: 'Harlequin', seller: 'The Spotted Gecko', year: '2023', gender: '未注明' },
+    'x-gecko-09.jpg': { sourceTitle: 'Pale Base Ink Spot Super Dalmatian', sourceMorph: 'Pale Base Ink Spot Super Dalmatian', morph: 'Harlequin', seller: 'Mercury Geckos', year: '2023', gender: '未注明' },
+    'x-gecko-10.jpg': { sourceTitle: 'Lilly White Black White Snowflaking', sourceMorph: 'Lilly White Black & White Snowflaking', morph: 'Lily White', seller: '2 Girls Geckos', year: '2023', gender: '未注明' },
+    'x-gecko-11.jpg': { sourceTitle: 'Funky Tricolor', sourceMorph: 'Funky Tricolor', morph: 'Harlequin', seller: 'Crestopia Reptiles', year: '2023', gender: '未注明' },
+    'x-gecko-12.jpg': { sourceTitle: 'Proven Female Lilly White', sourceMorph: 'Proven Female Lilly White', morph: 'Lily White', seller: 'Gecko Barracks', year: '2023', gender: '母' },
+    'x-gecko-13.jpg': { sourceTitle: 'Cornerstone Super Dalmatian', sourceMorph: 'Cornerstone Super Dalmatian', morph: 'Harlequin', seller: 'Manchitas & More', year: '2023', gender: '未注明' },
+    'x-gecko-14.jpg': { sourceTitle: 'Super Dalmatian Male', sourceMorph: 'Super Dalmatian', morph: 'Harlequin', seller: 'Plecho Geckos', year: '2023', gender: '公' },
+    'x-gecko-15.jpg': { sourceTitle: 'Lilly White', sourceMorph: 'Lilly White', morph: 'Lily White', seller: 'MDReptiles86', year: '2023', gender: '未注明' },
+    'x-gecko-16.jpg': { sourceTitle: 'High Contrast Tri-color', sourceMorph: 'High Contrast Tri-color', morph: 'Harlequin', seller: 'Crestopia Reptiles', year: '2023', gender: '未注明' },
+    'x-gecko-17.jpg': { sourceTitle: 'Bright Red Lilly White', sourceMorph: 'Bright Red Lilly White', morph: 'Lily White', seller: 'Mercury Geckos', year: '2023', gender: '未注明' },
+    'x-gecko-18.jpg': { sourceTitle: 'Axanthic Partial Pin', sourceMorph: 'Axanthic Partial Pin', morph: 'Axanthic', seller: 'Taboo Betty Reptiles', year: '2023', gender: '未注明' },
+    'x-gecko-19.jpg': { sourceTitle: 'Super Dalmatian', sourceMorph: 'Super Dalmatian', morph: 'Harlequin', seller: 'Mercury Geckos', year: '2023', gender: '未注明' },
+    'x-gecko-20.jpg': { sourceTitle: 'Lilly White', sourceMorph: 'Lilly White', morph: 'Lily White', seller: 'Limited Edition Geckos CO LLC', year: '2023', gender: '未注明' },
+    'x-gecko-21.jpg': { sourceTitle: 'Yellow Quadstripe With Huge Head', sourceMorph: 'Yellow Quadstripe', morph: 'Harlequin', seller: 'Celestial Exotics', year: '2023', gender: '未注明' },
+    'x-gecko-22.jpg': { sourceTitle: 'Proven Red Male Fluffy White Snow Flaking', sourceMorph: 'Proven Red · Fluffy White Snow Flaking', morph: 'Lily White', seller: '2 Girls Geckos', year: '2023', gender: '公' },
+    'x-gecko-23.jpg': { sourceTitle: 'Unreal Red', sourceMorph: 'Unreal Red', morph: 'Harlequin', seller: 'Jaski Exotics', year: '2023', gender: '未注明' },
+    'x-gecko-24.jpg': { sourceTitle: 'Red Phantom Port Hole', sourceMorph: 'Red Phantom Port Hole', morph: 'Sable', seller: 'Vermillion Geckos', year: '2023', gender: '未注明' },
+    'x-gecko-25.jpg': { sourceTitle: 'Pos. Male Tri Color Extreme', sourceMorph: 'Tri Color Extreme', morph: 'Harlequin', seller: 'Ensō Reptiles', year: '2023', gender: '公' },
+    'x-gecko-26.jpg': { sourceTitle: 'Beautiful Red Lilly White', sourceMorph: 'Beautiful Red Lilly White', morph: 'Lily White', seller: 'Va-Lilly-white-mx', year: '2023', gender: '未注明' },
+    'x-gecko-27.jpg': { sourceTitle: 'Inkspot Dalmatian', sourceMorph: 'Inkspot Dalmatian', morph: 'Harlequin', seller: 'Celestial Exotics', year: '2023', gender: '未注明' },
+    'x-gecko-28.jpg': { sourceTitle: 'InkBlot Dal', sourceMorph: 'InkBlot Dal', morph: 'Harlequin', seller: "Tara Leigh's Cresties", year: '2023', gender: '未注明' },
+    'x-gecko-29.jpg': { sourceTitle: 'Holdback Release Red Spot Super Dal', sourceMorph: 'Red Spot Super Dal', morph: 'Harlequin', seller: 'MP Cresties', year: '2025', gender: '未注明' },
+    'x-gecko-30.jpg': { sourceTitle: 'Red Phantom Lilly White', sourceMorph: 'Red Phantom Lilly White', morph: 'Lily White', seller: 'Cold Blooded Science', year: '2026', gender: '未注明' },
+    'x-gecko-31.jpg': { sourceTitle: 'Super Dal Male', sourceMorph: 'Super Dal', morph: 'Harlequin', seller: 'Uphill Farm & Exotics', year: '2024', gender: '公' },
+    'x-gecko-32.jpg': { sourceTitle: 'Killer Lilly White', sourceMorph: 'Killer Lilly White', morph: 'Lily White', seller: 'Jaski Exotics', year: '2023', gender: '未注明' },
+    'x-gecko-33.jpg': { sourceTitle: 'Bright Red LW', sourceMorph: 'Bright Red Lily White', morph: 'Lily White', seller: 'Paradise Cresties', year: '2025', gender: '未注明' },
+    'x-gecko-34.jpg': { sourceTitle: 'Piece Of Cake', sourceMorph: 'Piece Of Cake', morph: 'Harlequin', seller: "Griffin & Mundy's", year: '2026', gender: '未注明' },
+    'x-gecko-35.jpg': { sourceTitle: 'RED Ink Spot Dal Red Hots', sourceMorph: 'Red Ink Spot Dal · Red Hots', morph: 'Harlequin', seller: "Kate's Colorful Cresteds", year: '2025', gender: '未注明' },
+    'x-gecko-36.jpg': { sourceTitle: 'Drips, Drips And More Drips', sourceMorph: 'Drips', morph: 'Harlequin', seller: 'Fernflower.exotics', year: '2025', gender: '未注明' },
+    'x-gecko-37.jpg': { sourceTitle: 'Roll Player X Tiddlywinks 0608', sourceMorph: 'Roll Player × Tiddlywinks 0608', morph: 'Harlequin', seller: "Tara Leigh's Cresties", year: '2026', gender: '未注明' },
+    'x-gecko-38.jpg': { sourceTitle: 'Rtb Red Lilly', sourceMorph: 'RTB Red Lily', morph: 'Lily White', seller: 'Murderous Morphs', year: '2025', gender: '未注明' },
+    'x-gecko-39.jpg': { sourceTitle: 'Fire Bolt Stripe Tiger Holdback', sourceMorph: 'Fire Bolt Stripe Tiger', morph: 'Harlequin', seller: 'Dragon Momma Cresties', year: '2025', gender: '未注明' },
+    'x-gecko-40.jpg': { sourceTitle: 'Gorgeous Male Extreme', sourceMorph: 'Extreme', morph: 'Harlequin', seller: 'Cape Coral Cresties', year: '2025', gender: '公' },
+    'x-gecko-41.jpg': { sourceTitle: 'Imhotep X Canyonero Halloween Special Tux Capp', sourceMorph: 'Halloween Special Tux Capp', morph: 'Harlequin', seller: 'ZenGex', year: '2025', gender: '未注明' },
+    'x-gecko-42.jpg': { sourceTitle: 'Hypo Red', sourceMorph: 'Hypo Red', morph: 'Harlequin', seller: 'Southern Genetics', year: '2025', gender: '未注明' }
+  };
+
+  Object.keys(xLotMetadata).forEach(function (file) {
+    xLotMetadata[file].sourcePost = xImagePostLinks[file] || '';
+    xLotMetadata[file].sourceAccount = 'MorphMarket';
+  });
+
+  function sourceFocusFor(metadata) {
+    var text = String(metadata && (metadata.sourceMorph || metadata.sourceTitle) || '').toLowerCase();
+    var observations = [];
+    if (/lilly|lily|lw|white|snow/.test(text)) observations.push('乳白覆色与边缘完整度');
+    if (/red|yellow|charcoal|dark|black|pale|hypo/.test(text)) observations.push('底色饱和度与明暗层次');
+    if (/dal|ink|spot|drip|snowflak/.test(text)) observations.push('斑点分布与侧身纹理');
+    if (/tiger|stripe|quadstripe|pinstripe|flame|fire|tricolor|tri.color|phantom|tux|capp|extreme/.test(text)) observations.push('背线结构与纹理连续性');
+    if (!observations.length) observations.push('底色层次与体态比例');
+    return String(metadata.sourceMorph || metadata.sourceTitle || '原帖品种') + ' ｜ ' + observations.slice(0, 2).join('、');
+  }
+
+  function sourceObservationFor(metadata) {
+    var focus = sourceFocusFor(metadata);
+    var separator = focus.indexOf(' ｜ ');
+    return separator >= 0 ? focus.slice(separator + 3) : focus;
+  }
+
+  function descriptionForLot(profile, metadata, focus) {
+    if (!metadata) {
+      return profile.description + ' 本场档案聚焦“' + focus + '”，以单张清晰档案图记录外观表现，便于竞买人在出价前建立判断。';
+    }
+    var sourceMorph = metadata.sourceMorph || metadata.sourceTitle || '原帖品种未注明';
+    var seller = metadata.seller ? '，由 ' + metadata.seller + ' 发布' : '';
+    return '原帖品种标注为“' + sourceMorph + '”' + seller + '。本场以一张清晰档案图记录个体外观，观察重点为' + sourceObservationFor(metadata) + '；底色、纹理边界、冠线与体态比例共同构成档案判断。';
+  }
+
   var geneProfiles = {
     CHW: {
       label: 'CHW 紫曜系',
@@ -125,7 +210,7 @@
     'Lily White': {
       label: 'Lily White',
       subtitle: 'Lily White · 乳白覆色与背部留白',
-      description: 'Lily White 的表现不止于白色面积，更在于覆色的走向、边缘的完整度和底色对比。档案以背部、侧身与头冠三个观察面拆解视觉结构。',
+      description: 'Lily White 的表现不止于白色面积，更在于覆色的走向、边缘的完整度和底色对比。单张档案图重点拆解背部、侧身与头冠的视觉结构。',
       tags: ['乳白覆色', '边缘完整', '结构感']
     },
     Axanthic: {
@@ -385,37 +470,51 @@
 
   function createLots() {
     return lotSeeds.map(function (seed, index) {
-      var schedule = scheduleFor(index);
-      var increment = incrementFor(seed, index);
-      var profile = geneProfiles[seed[1]];
-      var snapshot = marketSnapshot(seed, index, increment);
-      /* CHW is reserved for the launch lot. Keeping it out of the rotating
-         archive pool prevents another lot's gallery from showing the purple
-         launch image or inheriting its source label. */
+      /* Join each downloaded image to the title/variety captured from the
+         same X post.  The catalogue has more cards than snapshots, so the
+         42-record pool is reused deterministically; a repeated image always
+         repeats its complete metadata record rather than a random seed label. */
       var image = index === 0 ? 'chw.jpeg' : imagePool[(index - 1) % imagePool.length];
-      var gallery = index === 0
-        ? ['chw.jpeg', 'x-gecko-01.jpg', 'x-gecko-02.jpg']
-        : [image, imagePool[(index + 6) % imagePool.length], imagePool[(index + 14) % imagePool.length]];
+      var metadata = index === 0 ? null : xLotMetadata[image];
+      var focus = metadata ? sourceFocusFor(metadata) : seed[3];
+      var effectiveSeed = metadata
+        ? [metadata.sourceTitle || seed[0], metadata.morph || seed[1], seed[2], focus, metadata.gender || seed[4], metadata.year || seed[5], metadata.seller || seed[6]]
+        : seed;
+      var schedule = scheduleFor(index);
+      var increment = incrementFor(effectiveSeed, index);
+      var profile = geneProfiles[effectiveSeed[1]] || geneProfiles.Harlequin;
+      var snapshot = marketSnapshot(effectiveSeed, index, increment);
+      /* CHW is reserved for the launch lot. Keeping it out of the rotating
+         archive pool prevents another lot from showing the purple launch image
+         or inheriting its source label. */
       return {
         id: 'GX-' + String(101 + index),
-        displayId: seed[1] === 'CHW' ? 'CHW-001' : 'GX-' + String(101 + index),
-        title: seed[0],
-        morph: seed[1],
+        displayId: effectiveSeed[1] === 'CHW' ? 'CHW-001' : 'GX-' + String(101 + index),
+        title: effectiveSeed[0],
+        morph: effectiveSeed[1],
+        sourceTitle: metadata ? metadata.sourceTitle : '',
+        sourceMorph: metadata ? metadata.sourceMorph : '',
+        sourceSeller: metadata ? metadata.seller : '',
+        sourceAccount: metadata ? (metadata.sourceAccount || 'MorphMarket') : '',
+        sourcePost: metadata ? (metadata.sourcePost || xImagePostLinks[image] || '') : '',
+        sourceYear: metadata ? (metadata.year || '') : '',
         image: image,
-        gallery: gallery,
-        price: seed[2],
+        price: effectiveSeed[2],
         increment: increment,
         deposit: 50,
-        focus: seed[3],
-        gender: seed[4],
-        year: seed[5],
-        seller: seed[6],
+        focus: effectiveSeed[3],
+        gender: effectiveSeed[4],
+        /* The post date is provenance, not a birth record. */
+        year: metadata ? '未注明' : effectiveSeed[5],
+        seller: effectiveSeed[6],
         sellerScore: (4.8 - (index % 4) * 0.1).toFixed(1),
         startsAt: nowAtLoad + schedule.start * 1000,
         endsAt: nowAtLoad + schedule.end * 1000,
-        description: profile.description + ' 本场档案聚焦“' + seed[3] + '”，以正面、背部和侧身三个视角记录外观表现，便于竞买人在出价前建立完整判断。',
-        tags: profile.tags.concat(index % 2 ? ['单只档案'] : ['繁育记录']),
-        bids: makeInitialBids(seed[2], increment, index, nowAtLoad + schedule.end * 1000),
+        description: descriptionForLot(profile, metadata, effectiveSeed[3]),
+        tags: metadata
+          ? [metadata.sourceMorph || metadata.sourceTitle || '原帖品种', 'X 原帖'].concat(profile.tags.slice(0, 1))
+          : profile.tags.concat(index % 2 ? ['单只档案'] : ['繁育记录']),
+        bids: makeInitialBids(effectiveSeed[2], increment, index, nowAtLoad + schedule.end * 1000),
         marketLow: snapshot.low,
         marketHigh: snapshot.high,
         marketEstimate: snapshot.estimate,
@@ -508,6 +607,10 @@
         appState.activity = savedActivity.slice(0, 50).map(function (entry, entryIndex) {
           var normalized = Object.assign({}, entry);
           var activityLot = getLot(normalized.lotId);
+          /* A previous catalogue revision used synthetic titles.  Keep the
+             bid record but relink its visible title to the current image
+             metadata so activity never shows a name from another photograph. */
+          if (activityLot) normalized.title = activityLot.title;
           normalized.bidder = displayBidderName(normalized.bidder, activityLot, normalized.at || entryIndex);
           var legacyLabel = String(normalized.label || '');
           if (normalized.ai || /(?:策略应价|AI竞价|AI代理|\bAI\b)/i.test(legacyLabel)) {
@@ -521,6 +624,8 @@
       }
       appState.orders = savedOrders.map(function (order) {
         var normalized = Object.assign({}, order);
+        var orderLot = getLot(normalized.lotId);
+        if (orderLot) normalized.title = orderLot.title;
         normalized.deposit = 50;
         return normalized;
       });
@@ -562,7 +667,7 @@
       }
       /* Persist the migration immediately so the legacy placeholder is not
          reconsidered on every refresh.  No account data is discarded: only
-         the untouched demo credit is rewritten as the new ¥0 baseline. */
+         the untouched placeholder credit is rewritten as the new ¥0 baseline. */
       if (legacyPlaceholder) writeState();
     } catch (error) {
       /* Private browsing and file:// pages can disable localStorage. */
@@ -727,19 +832,15 @@
     }
     if (image) {
       image.dataset.imageState = 'error';
-      /* Thumbnails do not have a full image frame; hide their broken glyph so
-         a single unavailable angle never makes the gallery look damaged. */
-      if (!frame) image.style.opacity = '0';
-      else image.style.opacity = '';
+      image.style.opacity = '';
     }
   }
 
   function tryNextImage(image) {
     if (!image) return;
     var state = imageCandidates && imageCandidates.get(image);
-    /* A quick switch between archive angles can leave a cancelled request
-       reporting an error after the next angle has already been assigned.  Do
-       not let that stale event advance the new candidate list. */
+    /* A cancelled request can report an error after a new lot image has been
+       assigned. Do not let that stale event advance the new candidate list. */
     if (state && state.requestId && String(state.requestId) !== String(image.dataset.imageRequest || '')) return;
     if (!state) {
       state = { list: candidatesFor(image.getAttribute('src')), index: 0, exhausted: false, requestId: image.dataset.imageRequest || '' };
@@ -789,7 +890,7 @@
     image.src = target;
     /* Some hosts complete memory-cache loads without dispatching a new event.
        Resolve that case on the next task, while guarding against a newer
-       angle selection. */
+       image selection. */
     window.setTimeout(function () {
       if (imageCandidates && imageCandidates.get(image) !== state) return;
       var liveSrc = image.currentSrc || image.src || image.getAttribute('src') || '';
@@ -859,7 +960,7 @@
       if (activeView !== 'all' && status !== activeView) return false;
       if (activeMorph !== 'all' && lot.morph !== activeMorph) return false;
       if (!query) return true;
-      var haystack = [lot.id, lot.title, lot.morph, lot.seller, lot.focus, lot.description, lot.tags.join(' ')].join(' ').toLowerCase();
+      var haystack = [lot.id, lot.title, lot.sourceTitle, lot.sourceMorph, lot.morph, lot.seller, lot.sourceSeller, lot.focus, lot.description, lot.tags.join(' ')].join(' ').toLowerCase();
       return haystack.indexOf(query) !== -1;
     });
     result.sort(function (a, b) {
@@ -888,10 +989,11 @@
     var favorite = appState.favorites.indexOf(lot.id) !== -1;
     var source = assetUrl(lot.image);
     var isChw = lot.morph === 'CHW';
+    var cardMorph = lot.sourceMorph || lot.morph;
     return '<article class="lot-card' + (isChw ? ' lot-card-chw' : '') + '" data-lot-id="' + esc(lot.id) + '">' +
       '<div class="lot-card-image" data-image-frame data-fallback="' + esc(lot.title) + '">' +
         '<img src="' + esc(source) + '" alt="' + esc(lot.title + ' 睫角守宫') + '" loading="lazy" decoding="async" />' +
-        '<div class="card-top"><span>' + esc(lot.displayId || (isChw ? 'CHW-001' : lot.id)) + '</span><span>' + esc(lot.morph) + '</span></div>' +
+        '<div class="card-top"><span>' + esc(lot.displayId || (isChw ? 'CHW-001' : lot.id)) + '</span><span>' + esc(cardMorph) + '</span></div>' +
         '<div class="card-bottom"><span class="card-status ' + status + '">' + statusLabel(status) + '</span><button class="card-heart' + (favorite ? ' is-saved' : '') + '" type="button" data-favorite="' + esc(lot.id) + '" aria-label="' + (favorite ? '取消收藏' : '收藏拍品') + '">' + (favorite ? '♥' : '♡') + '</button></div>' +
       '</div>' +
       '<div class="lot-card-body"><h3>' + esc(lot.title) + '</h3><p class="lot-card-subtitle">' + esc(lot.focus) + '</p>' +
@@ -922,7 +1024,7 @@
        over, so visitors can still inspect the complete archive and result. */
     var liveLot = getLot('GX-101') || lots.find(function (lot) { return statusOf(lot) === 'live'; }) || lots[0];
     if (!liveLot) return;
-    var profile = geneProfiles[liveLot.morph];
+    var profile = geneProfiles[liveLot.morph] || geneProfiles.Harlequin;
     var image = $('featured-image');
     setImage(image, assetUrl(liveLot.image), liveLot.title + ' 睫角守宫', liveLot.title);
     wireImage(image);
@@ -940,7 +1042,10 @@
       $('featured-chip').textContent = statusLabel(statusOf(liveLot));
       $('featured-chip').className = 'lot-chip ' + statusOf(liveLot);
     }
-    if ($('featured-tags')) $('featured-tags').innerHTML = liveLot.tags.slice(0, 4).map(function (tag) { return '<span>' + esc(tag) + '</span>'; }).join('') + '<span>' + esc(liveLot.gender) + '</span><span>' + esc(liveLot.year) + ' 年生</span>';
+    if ($('featured-tags')) {
+      var yearTag = liveLot.sourceYear ? '原帖 ' + liveLot.sourceYear : (liveLot.year && liveLot.year !== '未注明' ? liveLot.year + ' 年生' : '年份未注明');
+      $('featured-tags').innerHTML = liveLot.tags.slice(0, 4).map(function (tag) { return '<span>' + esc(tag) + '</span>'; }).join('') + '<span>' + esc(liveLot.gender) + '</span><span>' + esc(yearTag) + '</span>';
+    }
     var feature = $('featured-lot');
     if (feature) feature.dataset.lotId = liveLot.id;
     var featuredWatch = $('featured-watch');
@@ -1186,12 +1291,11 @@
     }).join('');
   }
 
-  function renderModalSource(lot, file) {
+  function renderModalSource(lot) {
     if (!lot) return;
-    var rawFile = String(file || lot.image || '');
+    var rawFile = String(lot.image || '');
     var currentFile = imageFileName(rawFile);
     var isChw = currentFile.toLowerCase() === 'chw.jpeg';
-    var isPrimary = currentFile === imageFileName(lot.image);
     /* The catalogue can use X image URLs as well as the legacy local Commons
        files.  Detect the host before composing the caption so an X image is
        never described as Wikimedia material.  Keep the direct image URL as
@@ -1200,18 +1304,18 @@
     var isXImage = /^x-gecko[-_]/i.test(currentFile)
       || /(?:pbs\.twimg\.com|twimg\.com|(?:^|\/\/)(?:www\.)?(?:x|twitter)\.com)/i.test(rawFile);
     var isRemote = /^(?:https?:)?\/\//i.test(rawFile);
-    var postHref = xImagePostLinks[currentFile] || '';
+    var postHref = lot.sourcePost || xImagePostLinks[currentFile] || '';
     var sourceHref = isRemote ? rawFile : (postHref || assetUrl('ATTRIBUTIONS.md'));
     if (isXImage && postHref) sourceHref = postHref;
-    if ($('modal-image-label')) $('modal-image-label').textContent = isChw ? 'CHW / PURPLE LINE' : (isXImage ? 'ARCHIVE ANGLE / X' : 'ARCHIVE ANGLE / COMMONS');
+    if ($('modal-image-label')) $('modal-image-label').textContent = isChw ? 'CHW / PURPLE LINE' : (isXImage ? 'ARCHIVE / X' : 'ARCHIVE / COMMONS');
     if ($('modal-source')) {
       if (isChw) {
         $('modal-source').innerHTML = '拍品主图：紫曜系资料图 · <a href="' + esc(assetUrl('ATTRIBUTIONS.md')) + '" target="_blank" rel="noreferrer">查看素材说明 ↗</a>';
       } else if (isXImage) {
         var xLinkLabel = postHref ? '查看原帖 ↗' : (isRemote ? '查看原图 ↗' : '查看署名信息 ↗');
-        $('modal-source').innerHTML = (isPrimary ? '拍品图片档案：X 公开图片' : '角度资料图：X 公开图片') + ' · <a href="' + esc(sourceHref) + '" target="_blank" rel="noreferrer">' + xLinkLabel + '</a>';
+        $('modal-source').innerHTML = '拍品图片档案：X 公开图片 · <a href="' + esc(sourceHref) + '" target="_blank" rel="noreferrer">' + xLinkLabel + '</a>';
       } else {
-        $('modal-source').innerHTML = (isPrimary ? '拍品图片档案：Wikimedia Commons' : '角度资料图：Wikimedia Commons') + ' · <a href="' + esc(sourceHref) + '" target="_blank" rel="noreferrer">查看作者与许可信息 ↗</a>';
+        $('modal-source').innerHTML = '拍品图片档案：Wikimedia Commons · <a href="' + esc(sourceHref) + '" target="_blank" rel="noreferrer">查看作者与许可信息 ↗</a>';
       }
     }
   }
@@ -1326,17 +1430,19 @@
     if (!lot) return;
     /* The dialog itself is scrollable.  A previous archive (or the browser's
        automatic focus scroll) can leave it part-way down, which makes the
-       gallery appear blank even though the image is loaded above the fold. */
+       image appear blank even though it is loaded above the fold. */
     var lotDialog = document.querySelector('.lot-dialog');
     if (lotDialog) lotDialog.scrollTop = 0;
     activeLotId = id;
-    var profile = geneProfiles[lot.morph];
+    var profile = geneProfiles[lot.morph] || geneProfiles.Harlequin;
     var modalImage = $('modal-image');
     setImage(modalImage, assetUrl(lot.image), lot.title + ' 睫角守宫', lot.title);
     wireImage(modalImage);
     if ($('modal-id')) $('modal-id').textContent = lot.displayId || lot.id;
     if ($('modal-title')) $('modal-title').textContent = lot.title;
-    if ($('modal-subtitle')) $('modal-subtitle').textContent = profile.subtitle + ' · ' + lot.focus;
+    if ($('modal-subtitle')) $('modal-subtitle').textContent = lot.sourceMorph
+      ? '原帖品种 · ' + lot.sourceMorph + ' · ' + lot.focus.split(' ｜ ').slice(1).join(' ｜ ')
+      : profile.subtitle + ' · ' + lot.focus;
     if ($('modal-description')) {
       $('modal-description').textContent = lot.description + ' 页面价带：' + money(lot.marketLow) + '–' + money(lot.marketHigh) + '；档案评分 ' + Math.round(Number(lot.qualityScore || 0.7) * 100) + ' / 100。';
     }
@@ -1346,24 +1452,23 @@
       $('modal-status').textContent = statusLabel(statusOf(lot));
       $('modal-status').className = 'status-badge ' + statusOf(lot);
     }
-    renderModalSource(lot, lot.image);
+    renderModalSource(lot);
     if ($('modal-attributes')) {
-      $('modal-attributes').innerHTML = [
-        ['基因方向', profile.label], ['性别', lot.gender], ['出生年份', lot.year],
+      var sourceAttributes = lot.sourceMorph ? [
+        ['原帖品种', lot.sourceMorph],
+        ['原帖名称', lot.sourceTitle || lot.title],
+        ['原帖卖家', lot.sourceSeller || lot.seller],
+        ['原帖账号', lot.sourceAccount ? '@' + lot.sourceAccount : '未注明'],
+        ['原帖年份', lot.sourceYear || '未注明']
+      ] : [];
+      $('modal-attributes').innerHTML = sourceAttributes.concat([
+        ['站内分类', profile.label], ['性别', lot.gender], ['出生年份', lot.year],
         ['卖家', lot.seller], ['卖家评分', lot.sellerScore + ' / 5.0'], ['加价幅度', money(lot.increment)],
         ['保证金', money(lot.deposit)], ['运输方式', '专线冷暖箱'], ['档案编号', lot.id],
         ['同类价带', money(lot.marketLow) + '–' + money(lot.marketHigh)],
         ['页面估值', money(lot.marketEstimate)], ['档案评分', Math.round(Number(lot.qualityScore || 0.7) * 100) + ' / 100'],
         ['应价风格', lot.aiStyle + ' · 上限 ' + money(lot.aiBudget)]
-      ].map(function (pair) { return '<div class="attribute-cell"><small>' + esc(pair[0]) + '</small><strong>' + esc(pair[1]) + '</strong></div>'; }).join('');
-    }
-    var thumbs = $('modal-thumbs');
-    if (thumbs) {
-      thumbs.innerHTML = lot.gallery.map(function (file, index) {
-        var angle = lot.title + ' 角度 ' + (index + 1);
-        return '<button class="modal-thumb' + (index === 0 ? ' is-active' : '') + '" type="button" data-image-frame data-fallback="' + esc('角度 ' + (index + 1)) + '" data-thumb-file="' + esc(file) + '" data-thumb="' + esc(assetUrl(file)) + '" data-alt="' + esc(angle) + '" aria-label="切换至' + esc(angle) + '"><img src="' + esc(assetUrl(file)) + '" alt="' + esc(angle) + '" loading="eager" decoding="async" /></button>';
-      }).join('');
-      queryAll('.modal-thumb img', thumbs).forEach(wireImage);
+      ]).map(function (pair) { return '<div class="attribute-cell"><small>' + esc(pair[0]) + '</small><strong>' + esc(pair[1]) + '</strong></div>'; }).join('');
     }
     updateModalBidControls(lot);
     renderModalAiIndicators(lot);
@@ -1372,7 +1477,7 @@
     if (lotDialog) lotDialog.scrollTop = 0;
     window.setTimeout(function () {
       if (!$('bid-input') || statusOf(lot) !== 'live') return;
-      /* Keep the gallery at the top while still making keyboard bidding fast.
+      /* Keep the image at the top while still making keyboard bidding fast.
          `preventScroll` is supported by current browsers; the fallback
          restores the dialog position for older embedded WebViews. */
       var before = lotDialog ? lotDialog.scrollTop : 0;
@@ -1708,16 +1813,6 @@
       if (openButton) { event.preventDefault(); openLot(openButton.dataset.openLot); return; }
       var favorite = event.target.closest('[data-favorite]');
       if (favorite) { event.preventDefault(); event.stopPropagation(); toggleFavorite(favorite.dataset.favorite); return; }
-      var thumb = event.target.closest('[data-thumb]');
-      if (thumb) {
-        var modalImage = $('modal-image');
-        /* Prefer the raw filename so an inline host cannot accidentally
-           prepend its asset base twice.  Keep data-thumb as a compatibility
-           fallback for links created by older cached bundles. */
-        setImage(modalImage, thumb.dataset.thumbFile || thumb.dataset.thumb, thumb.dataset.alt, thumb.dataset.alt);
-        queryAll('.modal-thumb').forEach(function (item) { item.classList.toggle('is-active', item === thumb); });
-        renderModalSource(getLot(activeLotId), thumb.dataset.thumb);
-      }
     });
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape') { closeAllModals(); if (menu && menu.getAttribute('aria-expanded') === 'true') toggleMobileMenu(); }
