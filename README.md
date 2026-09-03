@@ -4,7 +4,7 @@
 
 每件拍品档案只展示一张主图；X 快照与原帖名称、品种、卖家及原帖链接按图片文件绑定，重复档案也沿用同一组来源信息。
 
-在线访问：<https://mcp.edgeone.site/share/mP0SGy7rVPqIStnXIpk_Q> · 源码：<https://github.com/leixianya/gecko-auction>
+在线访问：<https://mcp.edgeone.site/share/w2li4OBe_entgkyVesLf_> · 源码：<https://github.com/leixianya/gecko-auction>
 
 金额、账户余额、热度与竞拍者由浏览器端状态驱动；页面不采集支付、银行卡或身份信息。图片来源与许可记录见 [`assets/ATTRIBUTIONS.md`](assets/ATTRIBUTIONS.md)。
 
