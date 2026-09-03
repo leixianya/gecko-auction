@@ -464,12 +464,12 @@
   /* Pin mirrors to the published source revision for deterministic cache
      behavior; the revision contains both the CHW launch image and archive. */
   var imageMirrorBases = [
-    'https://cdn.jsdelivr.net/gh/leixianya/gecko-auction@2e9f8066c086e5fddc55bc605983fe8dcc066c09/assets/',
-    'https://testingcf.jsdelivr.net/gh/leixianya/gecko-auction@2e9f8066c086e5fddc55bc605983fe8dcc066c09/assets/',
-    'https://fastly.jsdelivr.net/gh/leixianya/gecko-auction@2e9f8066c086e5fddc55bc605983fe8dcc066c09/assets/',
-    'https://gcore.jsdelivr.net/gh/leixianya/gecko-auction@2e9f8066c086e5fddc55bc605983fe8dcc066c09/assets/',
-    'https://quantil.jsdelivr.net/gh/leixianya/gecko-auction@2e9f8066c086e5fddc55bc605983fe8dcc066c09/assets/',
-    'https://raw.githubusercontent.com/leixianya/gecko-auction/2e9f8066c086e5fddc55bc605983fe8dcc066c09/assets/'
+    'https://cdn.jsdelivr.net/gh/leixianya/gecko-auction@f6d64b66e02629d14d79af84958b4ae879467545/assets/',
+    'https://testingcf.jsdelivr.net/gh/leixianya/gecko-auction@f6d64b66e02629d14d79af84958b4ae879467545/assets/',
+    'https://fastly.jsdelivr.net/gh/leixianya/gecko-auction@f6d64b66e02629d14d79af84958b4ae879467545/assets/',
+    'https://gcore.jsdelivr.net/gh/leixianya/gecko-auction@f6d64b66e02629d14d79af84958b4ae879467545/assets/',
+    'https://quantil.jsdelivr.net/gh/leixianya/gecko-auction@f6d64b66e02629d14d79af84958b4ae879467545/assets/',
+    'https://raw.githubusercontent.com/leixianya/gecko-auction/f6d64b66e02629d14d79af84958b4ae879467545/assets/'
   ];
   var imageCandidates = typeof WeakMap === 'function' ? new WeakMap() : null;
 
